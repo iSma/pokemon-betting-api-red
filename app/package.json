@@ -1,0 +1,23 @@
+{
+  "name": "pokemon-betting-api-red",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iSma/pokemon-betting-api-red.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/iSma/pokemon-betting-api-red/issues"
+  },
+  "homepage": "https://github.com/iSma/pokemon-betting-api-red#readme",
+  "dependencies": {
+    "hapi": "^15.1.1"
+  }
+}
