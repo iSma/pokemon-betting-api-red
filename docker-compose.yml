@@ -1,5 +1,15 @@
 db:
   image: postgres
+  volumes:
+    - "./db/data:/var/lib/postgresql/data"
+    - "./db/init:/docker-entrypoint-initdb.d"
+
+  ports:
+    - "5000:5432"
+
+  env_file:
+    - db.env
+
 
 app:
   build: .
@@ -10,10 +20,8 @@ app:
     - "./app:/app"
 
   ports:
-    - "5000:5000"
+    - "3000:3000"
 
-  environment:
-    - PGHOST=db
-    - PGDATABASE=postgres
-    - PGUSER=postgres
+  env_file:
+    - db.env
 
