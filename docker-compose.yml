@@ -24,4 +24,5 @@ app:
 
   env_file:
     - db.env
+    - app.env
 
