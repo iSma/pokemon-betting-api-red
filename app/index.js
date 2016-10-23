@@ -1,7 +1,5 @@
 const Glue = require('glue');
 
-var db = require('./database.js');
-
 const manifest = {
   connections: [{
     port: process.env.API_PORT | 3000

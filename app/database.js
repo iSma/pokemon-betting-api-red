@@ -25,7 +25,15 @@ var User = db.define('user', {
 	}
 });
 
-db.sync({force: true});
 
-console.log(db)
-module.exports = db;
+
+db.sync({force: true}).then(function () {
+	return User.create({
+		name: 'John',
+		mail: 'jw@fakemail.com',
+		password: 'chaton2cite',
+		money: 1000
+	})});
+
+module.exports.db = db;
+module.exports.User = User;
