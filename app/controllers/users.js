@@ -40,7 +40,7 @@ module.exports.register = (server, options, next) => {
   });
 
   // GET /users/{id}
-    server.route({
+  server.route({
     method: 'GET',
     path: '/users/{id}',
     handler: (req, reply) => {
@@ -55,6 +55,45 @@ module.exports.register = (server, options, next) => {
       })
     },
 
+    config: {
+      tags: ['api'],
+      description: 'List all users',
+
+      validate: {
+        params: {
+          id: Joi.number()
+        },
+        query: {}
+      },
+
+      plugins: {
+        'hapi-swagger': {
+          'responses': {
+            200: {description: 'Sucess'},
+            404: {description: 'user not found'}
+          }
+        }
+      }
+    }
+  });
+
+  // DELETE /users/{id}
+  server.route({
+    method: 'DELETE',
+    path: '/users/{id}',
+    handler: (req, reply) => {
+      User.destroy({
+        where:{ 
+          id:req.params.id
+        }
+      }).then(function(n){
+        if (n == 1){
+          reply().code(200);
+        } else {
+          reply().code(404);
+        }
+      })
+    },
     config: {
       tags: ['api'],
       description: 'List all users',
@@ -91,7 +130,7 @@ module.exports.register = (server, options, next) => {
         })
     },
     config: {
-        tags: ['api'],
+        tags: ['api'],  
         description: 'add a new user',
         validate: {
             payload: {
