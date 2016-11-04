@@ -25,7 +25,30 @@ var User = db.define('user', {
 	}
 });
 
+const Event = db.define('Event', {
+  date: {
+    type: Sequelize.DATE
+  },
 
+  battle: {
+    type: Sequelize.INTEGER
+  },
+
+  amount: {
+    type: Sequelize.INTEGER
+  },
+
+  choice: {
+    type: Sequelize.BOOLEAN
+  },
+
+  result: {
+    type: Sequelize.BOOLEAN
+  }
+});
+
+User.hasMany(Event);
+Event.hasOne(Event);
 
 /*db.sync().then(function () {
 	return User.create({
@@ -35,5 +58,8 @@ var User = db.define('user', {
 		money: 1000
 	})});*/
 
-module.exports.db = db;
-module.exports.User = User;
+module.exports = {
+  db: db,
+  User: User,
+  Event: Event
+};
