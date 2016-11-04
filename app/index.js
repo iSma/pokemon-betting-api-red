@@ -34,5 +34,8 @@ Glue.compose(manifest, { relativeTo: __dirname }, (err, server) => {
   server.start((err) => {
     if (err) throw err;
     console.log(`Server running at: ${server.info.uri}`);
+
+    setInterval(require('./sync'), 1000*30); // Sync every half minute
+    // TODO: Extract sync period to global variable
   });
 });
