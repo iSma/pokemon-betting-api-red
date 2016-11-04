@@ -37,7 +37,7 @@ module.exports.register = (server, options, next) => {
 	          		'responses': {
 		            	200: {
 		              		description: 'Success',
-		              		schema: Joi.array().items(Joi.string() //to do joi sequelize)
+		              		schema: Joi.array().items(Joi.string()) //to do joi sequelize
 		            	}
 	         		}
 	        	}
@@ -73,7 +73,7 @@ module.exports.register = (server, options, next) => {
                     'responses': {
                         200: {
                             description: 'Success',
-                            schema: Joi.array().items(Joi.string() //tod joi sequelize)
+                            schema: Joi.array().items(Joi.string())//tod joi sequelize
                         }
                     }
                 }
@@ -81,6 +81,41 @@ module.exports.register = (server, options, next) => {
           }
     });
 
+    server.route({
+        method: 'GET',
+        path: '/events/{id}/events',
+        handler: (req, reply) => {
+            req.query.limit
+            Event.findAll({
+                where:{
+                    EventId: req.params.id
+                }
+            }).then(function(events){
+                reply(events).code(200);
+                
+            })
+        },
+
+        config: {
+            tags: ['api'],
+            description: 'list all events/bets',
+            validate: {
+                params: {
+                    id: Joi.number().integer().required()
+                }
+            },
+            plugins: {
+                'hapi-swagger': {
+                    'responses': {
+                        200: {
+                            description: 'Success',
+                            schema: Joi.array().items(Joi.string())//tod joi sequelize
+                        }
+                    }
+                }
+            }
+          }
+    });
 
     server.route({
         method: 'POST',
