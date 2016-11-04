@@ -47,7 +47,8 @@ const Event = db.define('Event', {
   }
 });
 
-Event.hasOne(User);
+User.hasMany(Event);
+Event.hasOne(Event);
 
 /*db.sync().then(function () {
 	return User.create({
