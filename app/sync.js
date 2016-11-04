@@ -1,6 +1,7 @@
 'use strict';
 
 const request = require('request-json');
+const Event = require('./database').Event;
 
 function sync() {
   // TODO: Extract API URL to global variable
@@ -9,7 +10,7 @@ function sync() {
   Event.findAll({
     // Get all 1st order bets (betting on a battle) that haven't been resolved.
     where: {
-      battle: { $ne: null }
+      battle: { $ne: null },
       result: null
     }
   }).then((events) => {
