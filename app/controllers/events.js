@@ -3,7 +3,6 @@ const Lodash = require('lodash');
 
 const Joi = require('joi');
 var Event = require('../database.js').Event;
-const JS = require('joi-sequelize');
 
 
 module.exports.register = (server, options, next) => {
@@ -127,6 +126,7 @@ module.exports.register = (server, options, next) => {
           UserId: req.payload.userId
           };
           if(req.payload.bet == 'battle'){
+            //todo check if battle exist
             new_event.battle = req.payload.betId
           } else if ( req.payload.bet == 'bet'){
             new_event.EventId = req.payload.betId
