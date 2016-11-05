@@ -25,6 +25,7 @@ const manifest = {
       }
     },
     { plugin: './controllers/users' },
+    { plugin: './controllers/events' },
     // ...
   ]
 };
