@@ -26,6 +26,7 @@
     "joi-sequelize": "^0.2.7",
     "loadash": "0.0.1",
     "pg": "^6.1.0",
+    "request-json": "^0.6.1",
     "sequelize": "^3.24.4",
     "vision": "^4.1.0"
   }
