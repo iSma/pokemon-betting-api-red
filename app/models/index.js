@@ -22,6 +22,24 @@ module.exports.register = (server, options, next) => {
   Transaction.belongsTo(Event);
   User.hasMany(Transaction);
 
+  Transaction.getMoney = function(userId) {
+    const p =
+      this
+      .sum('amount', { where:{ UserId: userId }})
+      .then((amount) => {
+        if (!isNaN(amount))
+          return amount;
+
+        return User.findOne({ where:{ id: userId } })
+          .then((user)=> {
+            if (user !== null) return 0;
+            else return null;
+          })
+      });
+
+    return Promise.resolve(p);
+  }
+
   server.app.DB = {
     db: db,
     User: User,

@@ -36,17 +36,20 @@ module.exports.register = (server, options, next) => {
 		method: 'POST',
 		path: '/transactions',
 		handler: (req, reply) => {
-			let new_transaction = {
-				amount: req.payload.amount,
-				UserId: req.payload.userId,
-			};
-			Transaction.create(new_transaction).then((new_transaction) => {
-				reply(new_transaction.id).code(201)
-			}).catch((error) => {
-				reply('transaction not created').code(404);
-			})
+      const amount = req.payload.amount;
+      const UserId = req.payload.userId;
 
-		},
+      Transaction.getMoney(UserId).then((money) => {
+        if (money === null)
+          reply(`User ${UserId} does not exist.`).code(404);
+        else if (amount + money < 0)
+          reply(`Not enough money (available funds = ${money})`).code(402);
+        else
+          Transaction.create({amount, UserId})
+          .then((t) => reply(t).code(201))
+          .catch((err) => reply(err).code(500));
+      });
+    },
         config: {
             tags: ['api'],
             description: 'make a new transaction',
@@ -75,28 +78,15 @@ module.exports.register = (server, options, next) => {
 	server.route({
 		method: 'GET',
 		path: '/balance/{id}/',
-		handler: (req, reply) => {
-
-			Transaction.sum('amount', {
-				where:{
-					UserId: req.params.id
-				}}).then((amount) => {
-					console.log(amount);
-					if (!isNaN(amount)){
-                    	reply(amount).code(200);
-                	}else{
-                		console.log('tets');
-                		User.findOne({
-        					where:{
-          					id: req.params.id
-          				}}).then((user)=> {
-          					if (user !== null)
-          					reply(0).code(200);
-          					else reply().code(404);
-          				})
-                	}
-            });
-		},
+    handler: (req, reply) => {
+      Transaction.getMoney(req.params.id)
+        .then((money) => {
+          if (money === null)
+            reply().code(404);
+          else
+            reply(money).code(200);
+        });
+    },
         config: {
             tags: ['api'],
             description: 'list balance of an user',
