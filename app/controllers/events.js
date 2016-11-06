@@ -1,6 +1,9 @@
 'use strict';
 const _ = require('lodash');
 
+const request = require('request-json');
+const client = request.createClient('http://pokemon-battle.bid/api/v1/');
+
 const Joi = require('joi');
 var Event = require('../database.js').Event;
 
@@ -10,27 +13,23 @@ module.exports.register = (server, options, next) => {
 
 	server.route({
 	  	method: 'GET',
-    	path: '/events',
+    	path: '/battles',
     	handler: (req, reply) => {
-    		req.query.limit
-    		Event.findAll({
-
-    		}).then(function(events){
-    			if (req.query.limit === undefined) reply(events).code(200);
-    			else reply(_.take(events, req.query.limit)).code(200)
-
-    		})
+            let response = [];
+            client.get(`battles/?limit=100&is_finished=false`).then(function(battles){
+                let now = new Date();
+                for(let b of battles.body){
+                    if(Date.parse(now) < Date.parse(b.start_time)){
+                        response.push(b);
+                    }
+                }
+                reply(response).code(200);
+            })
     	},
 
     	config: {
     		tags: ['api'],
-    		description: 'list all events/bets',
-    		validate: {
-        		query: {
-        			is_finished: Joi.boolean(),
-        			limit: Joi.number(),
-        		}
-        	},
+    		description: 'list upcoming battles',
 	        plugins: {
 	        	'hapi-swagger': {
 	          		'responses': {
@@ -43,6 +42,45 @@ module.exports.register = (server, options, next) => {
 	      	}
 	      }
 	});
+
+    server.route({
+        method: 'GET',
+        path: '/events',
+        handler: (req, reply) => {
+            let query = {where:{}};
+            if (req.query.is_finished){
+                where.query.result = null;
+            }
+            Event.findAll({
+                query
+            }).then(function(events){
+                if (req.query.limit === undefined) reply(events).code(200);
+                else reply(_.take(events, req.query.limit)).code(200)
+                
+            })
+        },
+
+        config: {
+            tags: ['api'],
+            description: 'list all events/bets',
+            validate: {
+                query: {
+                    is_finished: Joi.boolean(),
+                    limit: Joi.number(),
+                }
+            },
+            plugins: {
+                'hapi-swagger': {
+                    'responses': {
+                        200: {
+                            description: 'Success',
+                            schema: Joi.array().items(Joi.string()) //to do joi sequelize
+                        }
+                    }
+                }
+            }
+          }
+});
 
     server.route({
         method: 'GET',
@@ -97,7 +135,7 @@ module.exports.register = (server, options, next) => {
 
         config: {
             tags: ['api'],
-            description: 'list all events/bets',
+            description: 'list all events/bets made on a certain id',
             validate: {
                 params: {
                     id: Joi.number().integer().required()
