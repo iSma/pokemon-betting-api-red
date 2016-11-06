@@ -1,9 +1,9 @@
 'use strict';
 
 const Joi = require('joi');
-var User = require('../database.js').User;
 
 module.exports.register = (server, options, next) => {
+  const User = server.app.DB.User;
 
   // GET /users
   server.route({
@@ -83,7 +83,7 @@ module.exports.register = (server, options, next) => {
     path: '/users/{id}',
     handler: (req, reply) => {
       User.destroy({
-        where:{ 
+        where:{
           id:req.params.id
         }
       }).then(function(n){
@@ -129,7 +129,7 @@ module.exports.register = (server, options, next) => {
         })
     },
     config: {
-        tags: ['api'],  
+        tags: ['api'],
         description: 'add a new user',
         validate: {
             payload: {
@@ -151,5 +151,6 @@ module.exports.register = (server, options, next) => {
 
 module.exports.register.attributes = {
   name: 'users',
-  version: '1.0.0'
+  version: '1.0.0',
+  dependencies: 'sync'
 };
