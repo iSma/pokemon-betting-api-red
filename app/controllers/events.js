@@ -1,7 +1,11 @@
 'use strict';
 const _ = require('lodash');
+
 const request = require('request-json');
+const client = request.createClient('http://pokemon-battle.bid/api/v1/');
+
 const Joi = require('joi');
+var Event = require('../database.js').Event;
 
 
 module.exports.register = (server, options, next) => {
@@ -176,10 +180,18 @@ module.exports.register = (server, options, next) => {
             new_event.EventId = req.payload.betId
           } else reply().code(400);
           Event.create(new_event).then(function(new_event){
-              reply(new_event['id']).code(201);
+              reply(new_event.id).code(201);
+              return new_event;
             }).catch(function(error){
                 reply('event not created').code(404);
+            }).then((new_event)=>{
+                Transaction.create({
+                    UserId: new_event.UserId,
+                    EventId: new_event.id,
+                    amount: new_event.amount
+                })
             })
+
         },
         config: {
             tags: ['api'],
