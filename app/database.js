@@ -61,13 +61,14 @@ const Transaction = db.define('Transaction', {
 
 });
 
-Transaction.hasOne(Event);
+Transaction.belongsTo(Event);
 User.hasMany(Transaction);
 
-db.sync();
+db.sync({force:true});
 
 module.exports = {
   db: db,
   User: User,
-  Event: Event
+  Event: Event,
+  Transaction: Transaction
 };
