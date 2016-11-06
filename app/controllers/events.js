@@ -1,5 +1,5 @@
 'use strict';
-const Lodash = require('lodash');
+const _ = require('lodash');
 
 const Joi = require('joi');
 var Event = require('../database.js').Event;
@@ -17,8 +17,8 @@ module.exports.register = (server, options, next) => {
 
     		}).then(function(events){
     			if (req.query.limit === undefined) reply(events).code(200);
-    			else reply(Lodash.take(events, req.query.limit)).code(200)
-    			
+    			else reply(_.take(events, req.query.limit)).code(200)
+
     		})
     	},
 
@@ -55,7 +55,7 @@ module.exports.register = (server, options, next) => {
                 }
             }).then(function(event){
                 reply(event).code(200);
-                
+
             })
         },
 
@@ -91,7 +91,7 @@ module.exports.register = (server, options, next) => {
                 }
             }).then(function(events){
                 reply(events).code(200);
-                
+
             })
         },
 
@@ -138,7 +138,7 @@ module.exports.register = (server, options, next) => {
             })
         },
         config: {
-            tags: ['api'],  
+            tags: ['api'],
             description: 'add a new event',
             validate: {
                 payload: {

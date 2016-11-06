@@ -24,7 +24,7 @@
     "inert": "^4.0.2",
     "joi": "^9.2.0",
     "joi-sequelize": "^0.2.7",
-    "loadash": "0.0.1",
+    "lodash": "^4.16.6",
     "pg": "^6.1.0",
     "request-json": "^0.6.1",
     "sequelize": "^3.24.4",
