@@ -10,7 +10,7 @@ const db = new Sequelize(
     port:5432
   });
 
-var User = db.define('user', {
+var User = db.define('User', {
 	name: {
 		type: Sequelize.STRING
 	},
