@@ -2,11 +2,11 @@
 const _ = require('lodash');
 
 const Joi = require('joi');
-var Transaction = require('../database.js').Transaction;
-var User = require('../database.js').User;
 
 
 module.exports.register = (server, options, next) => {
+  var {User, Transaction} = server.app.DB;
+
 	server.route({
 		method: 'GET',
 		path: '/transactions',
@@ -29,7 +29,7 @@ module.exports.register = (server, options, next) => {
                     }
                 }
             }
-          }		
+          }
 	});
 
 	server.route({
@@ -69,7 +69,7 @@ module.exports.register = (server, options, next) => {
                     }
                 }
             }
-          }		
+          }
 	});
 
 	server.route({
@@ -118,7 +118,7 @@ module.exports.register = (server, options, next) => {
                     }
                 }
             }
-          }		
+          }
 	});
 
 
@@ -127,5 +127,6 @@ module.exports.register = (server, options, next) => {
 
 module.exports.register.attributes = {
   name: 'transactions',
-  version: '1.0.0'
+  version: '1.0.0',
+  dependencies: 'sync'
 };

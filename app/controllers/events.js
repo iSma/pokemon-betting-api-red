@@ -5,12 +5,12 @@ const request = require('request-json');
 const client = request.createClient('http://pokemon-battle.bid/api/v1/');
 
 const Joi = require('joi');
-var Event = require('../database.js').Event;
-var Transaction = require('../database.js').Transaction;
 
 
 module.exports.register = (server, options, next) => {
-	// GET/events
+  // TODO: Extract API URL to global variable
+  const client = request.createClient('http://pokemon-battle.bid/api/v1/');
+  const Event = server.app.DB.Event;
 
 	server.route({
 	  	method: 'GET',
@@ -64,7 +64,7 @@ module.exports.register = (server, options, next) => {
                 Event.findAll(query).then(function(events){
                     if (req.query.limit === undefined) reply(events).code(200);
                     else reply(_.take(events, req.query.limit)).code(200);
-                    
+
                 })
             }
         },
@@ -102,7 +102,7 @@ module.exports.register = (server, options, next) => {
                 }
             }).then(function(event){
                 reply(event).code(200);
-                
+
             })
         },
 
@@ -138,7 +138,7 @@ module.exports.register = (server, options, next) => {
                 }
             }).then(function(events){
                 reply(events).code(200);
-                
+
             })
         },
 
@@ -193,7 +193,7 @@ module.exports.register = (server, options, next) => {
 
         },
         config: {
-            tags: ['api'],  
+            tags: ['api'],
             description: 'add a new event',
             validate: {
                 payload: {
@@ -220,6 +220,7 @@ module.exports.register = (server, options, next) => {
 
 module.exports.register.attributes = {
   name: 'events',
-  version: '1.0.0'
+  version: '1.0.0',
+  dependencies: 'sync'
 };
 
