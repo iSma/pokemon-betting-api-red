@@ -5,7 +5,6 @@ const request = require('request-json');
 const client = request.createClient('http://pokemon-battle.bid/api/v1/');
 
 const Joi = require('joi');
-var Event = require('../database.js').Event;
 
 
 module.exports.register = (server, options, next) => {
