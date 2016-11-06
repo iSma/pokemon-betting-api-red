@@ -19,9 +19,6 @@ var User = db.define('User', {
 	},
 	password: {
 		type: Sequelize.STRING
-	},
-	money: {
-		type: Sequelize.FLOAT
 	}
 });
 
@@ -57,13 +54,17 @@ const Event = db.define('Event', {
 User.hasMany(Event);
 Event.hasOne(Event);
 
-/*db.sync().then(function () {
-	return User.create({
-		name: 'John',
-		mail: 'jw@fakemail.com',
-		password: 'chaton2cite',
-		money: 1000
-	})});*/
+const Transaction = db.define('Transaction', {
+  amount: {
+    type: Sequelize.INTEGER
+  },
+
+});
+
+Transaction.hasOne(Event);
+User.hasMany(Transaction);
+
+db.sync();
 
 module.exports = {
   db: db,

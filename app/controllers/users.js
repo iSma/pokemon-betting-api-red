@@ -123,8 +123,7 @@ module.exports.register = (server, options, next) => {
       User.create({
         name: req.payload.name,
         mail: req.payload.mail,
-        password: req.payload.password,
-        money: 0
+        password: req.payload.password
         }).then(function(new_user){
           reply(new_user['id']).code(201);
         })
