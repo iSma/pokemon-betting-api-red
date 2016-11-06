@@ -10,7 +10,7 @@ const Joi = require('joi');
 module.exports.register = (server, options, next) => {
   // TODO: Extract API URL to global variable
   const client = request.createClient('http://pokemon-battle.bid/api/v1/');
-  const Event = server.app.DB.Event;
+  var {Event, Transaction} = server.app.DB;
 
 	server.route({
 	  	method: 'GET',
@@ -167,30 +167,63 @@ module.exports.register = (server, options, next) => {
         method: 'POST',
         path: '/events',
         handler: (req, reply) => {
-          let new_event = {
-          amount: req.payload.amount,
-          choice: req.payload.choice,
-          UserId: req.payload.userId
+          let event = {
+            amount: req.payload.amount,
+            choice: req.payload.choice,
+            UserId: req.payload.userId
           };
-          if(req.payload.bet == 'battle'){
-            //todo check if battle exist
-            new_event.battle = req.payload.betId
-          } else if ( req.payload.bet == 'bet'){
-            new_event.EventId = req.payload.betId
-          } else reply().code(400);
-          Event.create(new_event).then(function(new_event){
-              reply(new_event.id).code(201);
-              return new_event;
-            }).catch(function(error){
-                reply('event not created').code(404);
-            }).then((new_event)=>{
-                Transaction.create({
-                    UserId: new_event.UserId,
-                    EventId: new_event.id,
-                    amount: new_event.amount
-                })
-            })
 
+          if(req.payload.bet == 'battle')
+            event.battle = req.payload.betId
+          else if (req.payload.bet == 'bet')
+            event.EventId = req.payload.betId
+          else {
+            reply("'bet' parameter must be 'battle' or 'bet'.").code(400);
+            return;
+          }
+
+          Transaction.getMoney(event.UserId)
+            .then((money) => {
+              if (money === null)
+                return Promise.reject({
+                  err: `User ${event.UserId} does not exist.`,
+                  code: 404
+                });
+              else if (money - event.amount < 0)
+                return Promise.reject({
+                  err: `Not enough money (available funds = ${money})`,
+                  code: 402
+                });
+              else
+                return event;
+            })
+            .then((event) => {
+              if (event.battle !== undefined)
+                // TODO: check if battle exists
+                // TODO: check if battle is not started
+                return Promise.resolve(event);
+              else
+                // TODO: check if bet has no result.
+                return Promise.resolve(event);
+            })
+            .then((event) => Event.create(event).catch((err) => {
+                return Promise.reject({
+                  err: `Event ${event.EventId} does not exist.`,
+                  code: 404
+                });
+            }))
+            .then((event) => {
+              return Transaction.create({amount: -event.amount, UserId: event.UserId})
+                .then((t) => event)
+                .catch((err) => reply(err).code(500));
+            })
+            .then((event) => {
+              reply(event).code(201);
+            })
+            .catch((err) => {
+              console.log(err);
+              reply(err.err).code(err.code)
+            });
         },
         config: {
             tags: ['api'],
@@ -200,7 +233,7 @@ module.exports.register = (server, options, next) => {
                     userId: Joi.number().integer().required(),
                     bet: Joi.string().required(),
                     betId: Joi.number().integer().required(),
-                    amount: Joi.number().required(),
+                    amount: Joi.number().required(), // TODO: Check > 0
                     choice: Joi.boolean().required(),
 
                 }
