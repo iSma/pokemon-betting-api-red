@@ -2,7 +2,7 @@ const Glue = require('glue');
 
 const manifest = {
   connections: [{
-    port: process.env.API_PORT | 3000
+    port: process.env.API_PORT || 3000
   }],
 
   registrations: [
