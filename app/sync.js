@@ -15,18 +15,18 @@ function sync() {
     }
   }).then((events) => {
     // Get list of unique battle IDs to sync.
-    const battleIds = new Set(events.map((e) => {e.battle}));
+    const battleIds = new Set(events.map((e) => e.battle));
 
     for (let id of battleIds) {
-      client.get(`events/${id}`).then((result) => {
+      console.log(`battles/${id}`)
+      client.get(`battles/${id}`).then((result) => {
         if (result.res.statusCode != 404) {
           // Battle has been deleted from remote API
           // TODO: Delete all bets referencing to this battle
           return;
-        }
-
-        if (result.res.statusCode != 200) {
+        } else if (result.res.statusCode != 200) {
           // TODO: Handle error.
+        } else {
           const battle = result.body;
           if (battle.end_time === null) return; // Battle isn't finished yet
 
