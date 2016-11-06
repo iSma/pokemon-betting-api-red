@@ -47,17 +47,25 @@ module.exports.register = (server, options, next) => {
         method: 'GET',
         path: '/events',
         handler: (req, reply) => {
-            let query = {where:{}};
-            if (req.query.is_finished){
-                where.query.result = null;
+            if(req.query.is_finished === undefined){
+                Event.findAll().then((events) => {
+                    if (req.query.limit === undefined) reply(events).code(200);
+                    else reply(_.take(events, req.query.limit)).code(200);
+                });
+
+            } else {
+                let query = {where:{}};
+                if (!req.query.is_finished){
+                    query.where.result = null;
+                }else{
+                    query.where.result = { $ne:null };
+                }
+                Event.findAll(query).then(function(events){
+                    if (req.query.limit === undefined) reply(events).code(200);
+                    else reply(_.take(events, req.query.limit)).code(200);
+                    
+                })
             }
-            Event.findAll({
-                query
-            }).then(function(events){
-                if (req.query.limit === undefined) reply(events).code(200);
-                else reply(_.take(events, req.query.limit)).code(200)
-                
-            })
         },
 
         config: {
@@ -93,7 +101,7 @@ module.exports.register = (server, options, next) => {
                 }
             }).then(function(event){
                 reply(event).code(200);
-
+                
             })
         },
 
@@ -129,7 +137,7 @@ module.exports.register = (server, options, next) => {
                 }
             }).then(function(events){
                 reply(events).code(200);
-
+                
             })
         },
 
@@ -176,7 +184,7 @@ module.exports.register = (server, options, next) => {
             })
         },
         config: {
-            tags: ['api'],
+            tags: ['api'],  
             description: 'add a new event',
             validate: {
                 payload: {
