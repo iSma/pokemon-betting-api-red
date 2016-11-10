@@ -10,7 +10,7 @@ const Joi = require('joi');
 module.exports.register = (server, options, next) => {
   // TODO: Extract API URL to global variable
   const client = request.createClient('http://pokemon-battle.bid/api/v1/');
-  var {Event, Transaction} = server.app.DB;
+  var {Bet, Transaction} = server.app.DB;
 
 	server.route({
 	  	method: 'GET',
@@ -46,12 +46,12 @@ module.exports.register = (server, options, next) => {
 
     server.route({
         method: 'GET',
-        path: '/events',
+        path: '/bets',
         handler: (req, reply) => {
             if(req.query.is_finished === undefined){
-                Event.findAll().then((events) => {
-                    if (req.query.limit === undefined) reply(events).code(200);
-                    else reply(_.take(events, req.query.limit)).code(200);
+                Bet.findAll().then((bets) => {
+                    if (req.query.limit === undefined) reply(bets).code(200);
+                    else reply(_.take(bets, req.query.limit)).code(200);
                 });
 
             } else {
@@ -61,9 +61,9 @@ module.exports.register = (server, options, next) => {
                 }else{
                     query.where.result = { $ne:null };
                 }
-                Event.findAll(query).then(function(events){
-                    if (req.query.limit === undefined) reply(events).code(200);
-                    else reply(_.take(events, req.query.limit)).code(200);
+                Bet.findAll(query).then(function(bets){
+                    if (req.query.limit === undefined) reply(bets).code(200);
+                    else reply(_.take(bets, req.query.limit)).code(200);
 
                 })
             }
@@ -71,7 +71,7 @@ module.exports.register = (server, options, next) => {
 
         config: {
             tags: ['api'],
-            description: 'list all events/bets',
+            description: 'list all bets/bets',
             validate: {
                 query: {
                     is_finished: Joi.boolean(),
@@ -93,22 +93,22 @@ module.exports.register = (server, options, next) => {
 
     server.route({
         method: 'GET',
-        path: '/events/{id}',
+        path: '/bets/{id}',
         handler: (req, reply) => {
             req.query.limit
-            Event.findOne({
+            Bet.findOne({
                 where:{
                     id: req.params.id
                 }
-            }).then(function(event){
-                reply(event).code(200);
+            }).then(function(bet){
+                reply(bet).code(200);
 
             })
         },
 
         config: {
             tags: ['api'],
-            description: 'list all events/bets',
+            description: 'list all bets/bets',
             validate: {
                 params: {
                     id: Joi.number().integer().required()
@@ -129,22 +129,22 @@ module.exports.register = (server, options, next) => {
 
     server.route({
         method: 'GET',
-        path: '/events/{id}/events',
+        path: '/bets/{id}/bets',
         handler: (req, reply) => {
             req.query.limit
-            Event.findAll({
+            Bet.findAll({
                 where:{
-                    EventId: req.params.id
+                    BetId: req.params.id
                 }
-            }).then(function(events){
-                reply(events).code(200);
+            }).then(function(bets){
+                reply(bets).code(200);
 
             })
         },
 
         config: {
             tags: ['api'],
-            description: 'list all events/bets made on a certain id',
+            description: 'list all bets/bets made on a certain id',
             validate: {
                 params: {
                     id: Joi.number().integer().required()
@@ -165,60 +165,60 @@ module.exports.register = (server, options, next) => {
 
     server.route({
         method: 'POST',
-        path: '/events',
+        path: '/bets',
         handler: (req, reply) => {
-          let event = {
+          let bet = {
             amount: req.payload.amount,
             choice: req.payload.choice,
             UserId: req.payload.userId
           };
 
           if(req.payload.bet == 'battle')
-            event.battle = req.payload.betId
+            bet.battle = req.payload.betId
           else if (req.payload.bet == 'bet')
-            event.EventId = req.payload.betId
+            bet.BetId = req.payload.betId
           else {
             reply("'bet' parameter must be 'battle' or 'bet'.").code(400);
             return;
           }
 
-          Transaction.getMoney(event.UserId)
+          Transaction.getMoney(bet.UserId)
             .then((money) => {
               if (money === null)
                 return Promise.reject({
-                  err: `User ${event.UserId} does not exist.`,
+                  err: `User ${bet.UserId} does not exist.`,
                   code: 404
                 });
-              else if (money - event.amount < 0)
+              else if (money - bet.amount < 0)
                 return Promise.reject({
                   err: `Not enough money (available funds = ${money})`,
                   code: 402
                 });
               else
-                return event;
+                return bet;
             })
-            .then((event) => {
-              if (event.battle !== undefined)
+            .then((bet) => {
+              if (bet.battle !== undefined)
                 // TODO: check if battle exists
                 // TODO: check if battle is not started
-                return Promise.resolve(event);
+                return Promise.resolve(bet);
               else
                 // TODO: check if bet has no result.
-                return Promise.resolve(event);
+                return Promise.resolve(bet);
             })
-            .then((event) => Event.create(event).catch((err) => {
+            .then((bet) => Bet.create(bet).catch((err) => {
                 return Promise.reject({
-                  err: `Event ${event.EventId} does not exist.`,
+                  err: `Bet ${bet.BetId} does not exist.`,
                   code: 404
                 });
             }))
-            .then((event) => {
-              return Transaction.create({amount: -event.amount, UserId: event.UserId})
-                .then((t) => event)
+            .then((bet) => {
+              return Transaction.create({amount: -bet.amount, UserId: bet.UserId})
+                .then((t) => bet)
                 .catch((err) => reply(err).code(500));
             })
-            .then((event) => {
-              reply(event).code(201);
+            .then((bet) => {
+              reply(bet).code(201);
             })
             .catch((err) => {
               console.log(err);
@@ -227,7 +227,7 @@ module.exports.register = (server, options, next) => {
         },
         config: {
             tags: ['api'],
-            description: 'add a new event',
+            description: 'add a new bet',
             validate: {
                 payload: {
                     userId: Joi.number().integer().required(),
@@ -239,7 +239,7 @@ module.exports.register = (server, options, next) => {
                 }
             },
             plugins: {'hapi-swagger': {responses: {
-                201: { description: 'new event Created'},
+                201: { description: 'new bet Created'},
                 400: {description: 'bad type'},
                 404: {description: 'id not found'}
             }}}
@@ -252,7 +252,7 @@ module.exports.register = (server, options, next) => {
 };
 
 module.exports.register.attributes = {
-  name: 'events',
+  name: 'bets',
   version: '1.0.0',
   dependencies: 'sync'
 };

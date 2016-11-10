@@ -27,7 +27,7 @@ const manifest = {
     { plugin: './models' },
     { plugin: './sync' },
     { plugin: './controllers/users' },
-    { plugin: './controllers/events' },
+    { plugin: './controllers/bets' },
     { plugin: './controllers/graph' },
     { plugin: './controllers/transactions' },
     // ...

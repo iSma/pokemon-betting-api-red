@@ -13,13 +13,13 @@ module.exports.register = (server, options, next) => {
     });
 
   const User = db.import('./user.js');
-  const Event = db.import('./event.js');
+  const Bet = db.import('./bet.js');
   const Transaction = db.import('./transaction.js');
 
-  User.hasMany(Event);
-  Event.hasOne(Event);
+  User.hasMany(Bet);
+  Bet.hasOne(Bet);
 
-  Transaction.belongsTo(Event);
+  Transaction.belongsTo(Bet);
   User.hasMany(Transaction);
 
   Transaction.getMoney = function(userId) {
@@ -43,7 +43,7 @@ module.exports.register = (server, options, next) => {
   server.app.DB = {
     db: db,
     User: User,
-    Event: Event,
+    Bet: Bet,
     Transaction: Transaction,
   }
 

@@ -6,20 +6,20 @@ const Joi = require('joi');
 module.exports.register = (server, options, next) => {
   // TODO: Extract API URL to global variable
   const client = request.createClient('http://pokemon-battle.bid/api/v1/');
-  const Event = server.app.DB.Event;
+  const Bet = server.app.DB.Bet;
 
   // Build bet graph. Clients should call this function without parameters, and
   // it will be called recursively with parameters.
-  function graph(event) {
+  function graph(bet) {
     let edges = [];
-    if (event === undefined) {
-      return Event.findAll({
+    if (bet === undefined) {
+      return Bet.findAll({
         where: {
           battle: { $ne: null }
         }
-      }).then((events) => {
-        events.forEach((e) => { edges.push(`"B${e.battle}" -> "E${e.id}";`) });
-        return Promise.all(events.map(graph));
+      }).then((bets) => {
+        bets.forEach((e) => { edges.push(`"B${e.battle}" -> "E${e.id}";`) });
+        return Promise.all(bets.map(graph));
       }).then((newEdges) => {
         newEdges.forEach((e) =>  edges.push(...e));
         let out = edges.join("\n  ");
@@ -30,11 +30,11 @@ digraph {
 }` + '\n'
       });
     } else {
-      return Event.findAll({
-        where: { EventId: event.id }
-      }).then((events) => {
-        events.forEach((e) => { edges.push(`"E${event.id}" -> "E${e.id}";`) });
-        return Promise.all(events.map(graph));
+      return Bet.findAll({
+        where: { BetId: bet.id }
+      }).then((bets) => {
+        bets.forEach((e) => { edges.push(`"E${bet.id}" -> "E${e.id}";`) });
+        return Promise.all(bets.map(graph));
       }).then((newEdges) => {
         newEdges.forEach((e) =>  edges.push(...e));
         return edges;

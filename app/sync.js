@@ -5,32 +5,32 @@ const request = require('request-json');
 module.exports.register = (server, options, next) => {
   // TODO: Extract API URL to global variable
   const client = request.createClient('http://pokemon-battle.bid/api/v1/');
-  const Event = server.app.DB.Event;
+  const Bet = server.app.DB.Bet;
 
-  function sync(event) {
+  function sync(bet) {
     // TODO: refactor as Promise
-    if (event !== undefined) {
+    if (bet !== undefined) {
       // We are being called recursively
       // TODO: Pay user's winnings
-      const result = event.choice == event.result;
+      const result = bet.choice == bet.result;
 
       // Recursively update child bets
-      Event.update(
+      Bet.update(
         { result: result },
         { where: { battle: id } })
-        .then((events) => { events.forEach(syncRecursive) });
+        .then((bets) => { bets.forEach(syncRecursive) });
     } else {
       // We are in the root call
-      Event.findAll({
+      Bet.findAll({
         // Get all 1st order bets (betting on a battle) that haven't been
         // resolved.
         where: {
           battle: { $ne: null },
           result: null
         }
-      }).then((events) => {
+      }).then((bets) => {
         // Get list of unique battle IDs to sync.
-        const battleIds = new Set(events.map((e) => e.battle));
+        const battleIds = new Set(bets.map((e) => e.battle));
         for (let id of battleIds) {
           client.get(`battles/${id}`).then((res) => {
             const battle = res.body;
@@ -39,10 +39,10 @@ module.exports.register = (server, options, next) => {
             const result = battle.winner.trainer_id == battle.team1.trainer.id;
             // Save the result to all bets referring to this battle and
             // recursively update the child bets.
-            Event.update(
+            Bet.update(
               { result: result },
               { where: { battle: id } })
-              .then((events) => { events.forEach(sync) });
+              .then((bets) => { bets.forEach(sync) });
           }).catch((err) => {
             // TODO: Handle error.
             // Battle might have been deleted from remote API

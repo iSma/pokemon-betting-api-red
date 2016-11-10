@@ -1,6 +1,6 @@
 'use strict';
 
-module.exports = (db, DataTypes) => db.define('Event', {
+module.exports = (db, DataTypes) => db.define('Bet', {
   date: {
     type: DataTypes.DATE
   },
