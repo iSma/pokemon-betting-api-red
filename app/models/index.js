@@ -40,6 +40,40 @@ module.exports.register = (server, options, next) => {
     return Promise.resolve(p);
   }
 
+  Bet.getOdd = function( type, id, amount = 0 ) {
+    let query = {where:{}};
+    console.log(type);
+    if (type == "battle"){
+      query.where.battle = id;
+    }else if (type == "bet"){
+      query.where.BetId = id;
+    }
+    query.where.choice = true;
+    const p =
+    this
+    .sum('amount', query).then( win => {
+      query.where.choice = false;
+      return Bet.sum('amount', query).then( loose =>{
+        if (isNaN(win)){
+          win = 0;
+        };
+        if (isNaN(loose)){
+          loose = 0;
+        };
+        if(amount == 0 ){
+          console.log(win,loose);
+          return [win/(win+loose),loose/(win+loose)];
+        }else{
+          var g_win = (loose + win + amount)*(amount/(win+amount))/amount;
+          var g_loose = (loose + win + amount)*(amount/(loose+amount))/amount;
+          console.log(g_win,g_loose);
+          return [g_win, g_loose];
+        }
+      })
+    });
+    return Promise.resolve(p);
+  }
+
   server.app.DB = {
     db: db,
     User: User,

@@ -102,7 +102,6 @@ module.exports.register = (server, options, next) => {
                 }
             }).then(function(bet){
                 reply(bet).code(200);
-
             })
         },
 
@@ -246,6 +245,77 @@ module.exports.register = (server, options, next) => {
             }
 
   });
+
+  server.route({
+        method: 'GET',
+        path: '/battles/{id}/odd',
+        handler: (req, reply) => {
+          //TODO check if battle exist
+          Bet.getOdd('battle', req.params.id,req.query.amount).then( odd =>{
+            reply(odd).code(200);
+          });
+        },
+
+        config: {
+            tags: ['api'],
+            description: 'get odd on a certain bet on a battle',
+            validate: {
+                params: {
+                    id: Joi.number().integer().required()
+                },
+                query: {
+                    amount: Joi.number().integer()
+                }
+
+            },
+            plugins: {
+                'hapi-swagger': {
+                    'responses': {
+                        200: {
+                            description: 'Success',
+                            schema: Joi.array().items(Joi.number())//tod joi sequelize
+                        }
+                    }
+                }
+            }
+          }
+    });
+
+  server.route({
+      method: 'GET',
+      path: '/bets/{id}/odd',
+      handler: (req, reply) => {
+        //TODO check if bet exist
+        Bet.getOdd('bet', req.params.id,req.query.amount).then( odd =>{
+            reply(odd).code(200);
+          });
+      },
+
+      config: {
+          tags: ['api'],
+          description: 'get odd on a certain bet on another bet',
+          validate: {
+              params: {
+                  id: Joi.number().integer().required()
+              },
+              query: {
+                  amount: Joi.number().integer()
+              }
+
+          },
+          plugins: {
+              'hapi-swagger': {
+                  'responses': {
+                      200: {
+                          description: 'Success',
+                          schema: Joi.array().items(Joi.number())//tod joi sequelize
+                      }
+                  }
+              }
+          }
+        }
+  });
+
 
 	return next();
 
