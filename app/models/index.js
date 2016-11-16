@@ -62,7 +62,8 @@ module.exports.register = (server, options, next) => {
         };
         if(amount == 0 ){
           console.log(win,loose);
-          return [win/(win+loose),loose/(win+loose)];
+          if (win + loose == 0) return [1,1];
+          else return [win/(win+loose),loose/(win+loose)];
         }else{
           var g_win = (loose + win + amount)*(amount/(win+amount))/amount;
           var g_loose = (loose + win + amount)*(amount/(loose+amount))/amount;
