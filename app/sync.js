@@ -18,7 +18,7 @@ module.exports.register = (server, options, next) => {
       Bet.update(
         { result: result },
         { where: { battle: id } })
-        .then((bets) => { bets.forEach(syncRecursive) });
+        .then((bets) => { bets.forEach(sync) });
     } else {
       // We are in the root call
       Bet.findAll({
@@ -31,10 +31,12 @@ module.exports.register = (server, options, next) => {
       }).then((bets) => {
         // Get list of unique battle IDs to sync.
         const battleIds = new Set(bets.map((e) => e.battle));
+        const now = new Date();
         for (let id of battleIds) {
           client.get(`battles/${id}`).then((res) => {
             const battle = res.body;
-            if (battle.end_time === null) return; // Battle isn't finished yet
+            if (battle.end_time === null) return; // Battle isn't started yet
+            if(Date.parse(now) < Date.parse(battle.end_time)) return;
 
             const result = battle.winner.trainer_id == battle.team1.trainer.id;
             // Save the result to all bets referring to this battle and
