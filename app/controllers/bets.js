@@ -3,14 +3,13 @@ const _ = require('lodash');
 
 const request = require('request-json');
 const client = request.createClient('http://pokemon-battle.bid/api/v1/');
-
 const Joi = require('joi');
-
 
 module.exports.register = (server, options, next) => {
   // TODO: Extract API URL to global variable
   const client = request.createClient('http://pokemon-battle.bid/api/v1/');
-  var {Bet, Transaction} = server.app.DB;
+  const {Bet, Transaction} = server.app.db;
+  const J = server.app.joi;
 
 	server.route({
 	  	method: 'GET',
@@ -36,7 +35,7 @@ module.exports.register = (server, options, next) => {
 	          		'responses': {
 		            	200: {
 		              		description: 'Success',
-		              		schema: Joi.array().items(Joi.string()) //to do joi sequelize
+		              		schema: Joi.array().items(Joi.string()) // TODO: replicate schema from remote API
 		            	}
 	         		}
 	        	}
@@ -83,7 +82,7 @@ module.exports.register = (server, options, next) => {
                     'responses': {
                         200: {
                             description: 'Success',
-                            schema: Joi.array().items(Joi.string()) //to do joi sequelize
+                          schema: Joi.array().items(J.Bet.joi()) // TODO: add relations
                         }
                     }
                 }
@@ -118,7 +117,7 @@ module.exports.register = (server, options, next) => {
                     'responses': {
                         200: {
                             description: 'Success',
-                            schema: Joi.array().items(Joi.string())//tod joi sequelize
+                          schema: J.Bet.joi() // TODO: add relations
                         }
                     }
                 }
@@ -154,8 +153,7 @@ module.exports.register = (server, options, next) => {
                     'responses': {
                         200: {
                             description: 'Success',
-                            schema: Joi.array().items(Joi.string())//tod joi sequelize
-                        }
+                            schema: Joi.array().items(J.Bet.joi()) // TODO: add relations
                     }
                 }
             }

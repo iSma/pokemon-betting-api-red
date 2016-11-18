@@ -3,9 +3,8 @@ const _ = require('lodash');
 
 const Joi = require('joi');
 
-
 module.exports.register = (server, options, next) => {
-  var {User, Transaction} = server.app.DB;
+  var {User, Transaction} = server.app.db;
 
 	server.route({
 		method: 'GET',

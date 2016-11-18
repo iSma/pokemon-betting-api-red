@@ -3,7 +3,8 @@
 const Joi = require('joi');
 
 module.exports.register = (server, options, next) => {
-  const User = server.app.DB.User;
+  const User = server.app.db.User;
+  const J = server.app.joi;
 
   // GET /users
   server.route({
@@ -31,7 +32,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: Joi.array().items(Joi.string())
+              schema: Joi.array().items(J.User.joi()) // TODO: verify
             }
           }
         }

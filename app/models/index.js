@@ -1,6 +1,7 @@
 'use strict';
 
 const Sequelize = require('sequelize');
+const JoiSequelize = require('joi-sequelize');
 
 module.exports.register = (server, options, next) => {
   const db = new Sequelize(
@@ -12,75 +13,21 @@ module.exports.register = (server, options, next) => {
       port:5432
     });
 
-  const User = db.import('./user.js');
-  const Bet = db.import('./bet.js');
-  const Transaction = db.import('./transaction.js');
+  server.app.db = {};
+  server.app.joi = {};
 
-  User.hasMany(Bet);
-  Bet.hasOne(Bet);
+  ['user', 'bet', 'transaction']
+    .map((name) => `./${name}.js`)
+    .forEach((file) => {
+      const model = db.import(file);
+      const joi = new JoiSequelize(require(file));
 
-  Transaction.belongsTo(Bet);
-  User.hasMany(Transaction);
-
-  Transaction.getMoney = function(userId) {
-    const p =
-      this
-      .sum('amount', { where:{ UserId: userId }})
-      .then((amount) => {
-        if (!isNaN(amount))
-          return amount;
-
-        return User.findOne({ where:{ id: userId } })
-          .then((user)=> {
-            if (user !== null) return 0;
-            else return null;
-          })
-      });
-
-    return Promise.resolve(p);
-  }
-
-  Bet.getOdd = function( type, id, amount = 0 ) {
-    let query = {where:{}};
-    console.log(type);
-    if (type == "battle"){
-      query.where.battle = id;
-    }else if (type == "bet"){
-      query.where.BetId = id;
-    }
-    query.where.choice = true;
-    const p =
-    this
-    .sum('amount', query).then( win => {
-      query.where.choice = false;
-      return Bet.sum('amount', query).then( loose =>{
-        if (isNaN(win)){
-          win = 0;
-        };
-        if (isNaN(loose)){
-          loose = 0;
-        };
-        if(amount == 0 ){
-          console.log(win,loose);
-          if (win + loose == 0) return [1,1];
-          else return [win/(win+loose),loose/(win+loose)];
-        }else{
-          var g_win = (loose + win + amount)*(amount/(win+amount))/amount;
-          var g_loose = (loose + win + amount)*(amount/(loose+amount))/amount;
-          console.log(g_win,g_loose);
-          return [g_win, g_loose];
-        }
-      })
+      server.app.db[model.name] = model;
+      server.app.joi[model.name] = joi;
     });
-    return Promise.resolve(p);
-  }
 
-  server.app.DB = {
-    db: db,
-    User: User,
-    Bet: Bet,
-    Transaction: Transaction,
-  }
+  for (const model in server.app.db)
+    server.app.db[model].associate(server.app.db);
 
   db.sync(/*{ force: true }*/).then(() => next());
 }
