@@ -26,34 +26,18 @@ module.exports.register = (server, options, next) => {
     method: 'GET',
     path: '/bets',
     handler: (req, reply) => {
-      if(req.query.is_finished === undefined){
-        Bet.findAll().then((bets) => {
-          if (req.query.limit === undefined) reply(bets).code(200);
-          else reply(_.take(bets, req.query.limit)).code(200);
-        });
-
-      } else {
-        let query = {where:{}};
-        if (!req.query.is_finished) {
-          query.where.result = null;
-        }else{
-          query.where.result = { $ne:null };
-        }
-
-        Bet.findAll(query).then((bets) => {
-          if (req.query.limit === undefined) reply(bets).code(200);
-          else reply(_.take(bets, req.query.limit)).code(200);
-        });
-      }
+      Bet.getAll(req.query)
+        .then((bets) => reply(bets).code(200));
     },
 
     config: {
       tags: ['api'],
-      description: 'list all bets/bets',
+      description: 'List all bets',
       validate: {
         query: {
-          is_finished: Joi.boolean(),
-          limit: Joi.number(),
+          isFinished: Joi.boolean().default(false),
+          isStarted: Joi.boolean().default(false).
+          limit: Joi.number().integer().positive().max(100).default(20)
         }
       },
       plugins: {
@@ -73,11 +57,9 @@ module.exports.register = (server, options, next) => {
     method: 'GET',
     path: '/bets/{id}',
     handler: (req, reply) => {
-      Bet.findOne({
-        where:{
-          id: req.params.id
-        }
-      }).then((bet) => reply(bet).code(200));
+      Bet.get(req.params.id)
+        .then((bet) => reply(bet).code(200))
+        .catch((err) => reply(err).code(err.code));
     },
 
     config: {
@@ -85,12 +67,13 @@ module.exports.register = (server, options, next) => {
       description: 'Get a bet',
       validate: {
         params: {
-          id: Joi.number().integer().required()
+          id: Joi.number().integer().positive().required()
         }
       },
       plugins: {
         'hapi-swagger': {
           'responses': {
+            // TODO: add 404
             200: {
               description: 'Success',
               schema: J.Bet.joi() // TODO: add relations
@@ -105,25 +88,24 @@ module.exports.register = (server, options, next) => {
     method: 'GET',
     path: '/bets/{id}/bets',
     handler: (req, reply) => {
-      req.query.limit
-      Bet.findAll({
-        where:{
-          BetId: req.params.id
-        }
-      }).then((bets) => reply(bets).code(200));
+      Bet.get(req.params.id)
+        .then((bet) => bet.getBets())
+        .then((bets) => reply(bets).code(200))
+        .catch((err) => reply(err).code(err.code));
     },
 
     config: {
       tags: ['api'],
-      description: 'list all bets/bets made on a certain id',
+      description: 'List all bets made on a certain bet',
       validate: {
         params: {
-          id: Joi.number().integer().required()
+          id: Joi.number().integer().positive().required()
         }
       },
       plugins: {
         'hapi-swagger': {
           'responses': {
+            // TODO: add 404
             200: {
               description: 'Success',
               schema: Joi.array().items(J.Bet.joi()) // TODO: add relations
@@ -219,7 +201,7 @@ module.exports.register = (server, options, next) => {
 
   });
 
-  // TODO: move to GET /battles/{id} (as property of battle object)
+  // TODO???: move to GET /battles/{id} (as property of battle object)
   server.route({
     method: 'GET',
     path: '/battles/{id}/odd',
@@ -255,7 +237,7 @@ module.exports.register = (server, options, next) => {
     }
   });
 
-  // TODO: move to GET /bets/{id} (as property of bet object)
+  // TODO???: move to GET /bets/{id} (as property of bet object)
   server.route({
     method: 'GET',
     path: '/bets/{id}/odd',
@@ -293,7 +275,6 @@ module.exports.register = (server, options, next) => {
 
 
   return next();
-
 };
 
 module.exports.register.attributes = {

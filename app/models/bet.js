@@ -33,40 +33,45 @@ module.exports = (db, DataTypes) => db.define('Bet', {
       this.hasOne(this);
     },
 
-    // TODO: move to instance method
-    getOdd: function( type, id, amount = 0 ) {
-      let query = {where:{}};
-      console.log(type);
-      if (type == "battle"){
-        query.where.battle = id;
-      }else if (type == "bet"){
-        query.where.BetId = id;
-      }
-      query.where.choice = true;
-      const p =
-        this
-        .sum('amount', query).then( win => {
-          query.where.choice = false;
-          return Bet.sum('amount', query).then( loose =>{
-            if (isNaN(win)){
-              win = 0;
+    get: function(id) {
+      return this
+        .findOne({where: {id: id}})
+        .then((bet) => {
+          if (bet === null)
+            throw {
+              err: `Bet ${id} not found.`,
+              code: 404
             };
-            if (isNaN(loose)){
-              loose = 0;
-            };
-            if(amount == 0 ){
-              console.log(win,loose);
-              if (win + loose == 0) return [1,1];
-              else return [win/(win+loose),loose/(win+loose)];
-            }else{
-              var g_win = (loose + win + amount)*(amount/(win+amount))/amount;
-              var g_loose = (loose + win + amount)*(amount/(loose+amount))/amount;
-              console.log(g_win,g_loose);
-              return [g_win, g_loose];
-            }
-          })
+          else
+            return bet;
         });
-      return Promise.resolve(p);
+    },
+
+    getAll: function(query) {
+      query = query || {};
+      query.isFinished = query.isFinished || false;
+      query.isStarted = query.isStarted || false;
+
+      const where = {}; // TODO
+      return this.findAll({where: where})
+    }
+  },
+
+  instanceMethods: {
+    getBets: function() {
+      return this.$Model
+        .findAll({where: {BetId: this.id}});
+    },
+
+    getOdds: function() {
+      return this
+        .getBets()
+        .then((bets) => bets.reduce(([win, lose], bet) => {
+          if (bet.choice)
+            return [win+bet.amount, lose];
+          else
+            return [win, lose+bet.amount];
+        }), [0, 0]);
     }
   }
 });

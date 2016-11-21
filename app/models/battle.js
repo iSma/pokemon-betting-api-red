@@ -42,7 +42,6 @@ class Battle {
         .then(loop);
     };
 
-    console.log(`battles?is_finished=${query.isFinished}?limit=100`);
     const now = new Date();
     return client
       .get(`battles?is_finished=${query.isFinished}&limit=100`)
