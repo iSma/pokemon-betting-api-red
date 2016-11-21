@@ -26,6 +26,13 @@ module.exports.register = (server, options, next) => {
       server.app.joi[model.name] = joi;
     });
 
+  ['battle', 'trainer']
+    .map((name) => `./${name}.js`)
+    .forEach((file) => {
+      const model = require(file);
+      server.app.db[model.name] = model;
+    });
+
   for (const model in server.app.db)
     server.app.db[model].associate(server.app.db);
 
