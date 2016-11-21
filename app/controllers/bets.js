@@ -3,322 +3,278 @@ const _ = require('lodash');
 
 const request = require('request-json');
 const client = request.createClient('http://pokemon-battle.bid/api/v1/');
-
 const Joi = require('joi');
-
 
 module.exports.register = (server, options, next) => {
   // TODO: Extract API URL to global variable
   const client = request.createClient('http://pokemon-battle.bid/api/v1/');
-  var {Bet, Transaction} = server.app.DB;
+  const {Bet, Transaction} = server.app.db;
+  const J = server.app.joi;
 
-	server.route({
-	  	method: 'GET',
-    	path: '/battles',
-    	handler: (req, reply) => {
-            let response = [];
-            client.get(`battles/?limit=100&is_finished=false`).then(function(battles){
-                let now = new Date();
-                for(let b of battles.body){
-                    if(Date.parse(now) < Date.parse(b.start_time)){
-                        response.push(b);
-                    }
-                }
-                reply(response).code(200);
-            })
-    	},
-
-    	config: {
-    		tags: ['api'],
-    		description: 'list upcoming battles',
-	        plugins: {
-	        	'hapi-swagger': {
-	          		'responses': {
-		            	200: {
-		              		description: 'Success',
-		              		schema: Joi.array().items(Joi.string()) //to do joi sequelize
-		            	}
-	         		}
-	        	}
-	      	}
-	      }
-	});
-
-    server.route({
-        method: 'GET',
-        path: '/bets',
-        handler: (req, reply) => {
-            if(req.query.is_finished === undefined){
-                Bet.findAll().then((bets) => {
-                    if (req.query.limit === undefined) reply(bets).code(200);
-                    else reply(_.take(bets, req.query.limit)).code(200);
-                });
-
-            } else {
-                let query = {where:{}};
-                if (!req.query.is_finished){
-                    query.where.result = null;
-                }else{
-                    query.where.result = { $ne:null };
-                }
-                Bet.findAll(query).then(function(bets){
-                    if (req.query.limit === undefined) reply(bets).code(200);
-                    else reply(_.take(bets, req.query.limit)).code(200);
-
-                })
-            }
-        },
-
-        config: {
-            tags: ['api'],
-            description: 'list all bets/bets',
-            validate: {
-                query: {
-                    is_finished: Joi.boolean(),
-                    limit: Joi.number(),
-                }
-            },
-            plugins: {
-                'hapi-swagger': {
-                    'responses': {
-                        200: {
-                            description: 'Success',
-                            schema: Joi.array().items(Joi.string()) //to do joi sequelize
-                        }
-                    }
-                }
-            }
-          }
-});
-
-    server.route({
-        method: 'GET',
-        path: '/bets/{id}',
-        handler: (req, reply) => {
-            req.query.limit
-            Bet.findOne({
-                where:{
-                    id: req.params.id
-                }
-            }).then(function(bet){
-                reply(bet).code(200);
-            })
-        },
-
-        config: {
-            tags: ['api'],
-            description: 'list all bets/bets',
-            validate: {
-                params: {
-                    id: Joi.number().integer().required()
-                }
-            },
-            plugins: {
-                'hapi-swagger': {
-                    'responses': {
-                        200: {
-                            description: 'Success',
-                            schema: Joi.array().items(Joi.string())//tod joi sequelize
-                        }
-                    }
-                }
-            }
-          }
-    });
-
-    server.route({
-        method: 'GET',
-        path: '/bets/{id}/bets',
-        handler: (req, reply) => {
-            req.query.limit
-            Bet.findAll({
-                where:{
-                    BetId: req.params.id
-                }
-            }).then(function(bets){
-                reply(bets).code(200);
-
-            })
-        },
-
-        config: {
-            tags: ['api'],
-            description: 'list all bets/bets made on a certain id',
-            validate: {
-                params: {
-                    id: Joi.number().integer().required()
-                }
-            },
-            plugins: {
-                'hapi-swagger': {
-                    'responses': {
-                        200: {
-                            description: 'Success',
-                            schema: Joi.array().items(Joi.string())//tod joi sequelize
-                        }
-                    }
-                }
-            }
-          }
-    });
-
-    server.route({
-        method: 'POST',
-        path: '/bets',
-        handler: (req, reply) => {
-          let bet = {
-            amount: req.payload.amount,
-            choice: req.payload.choice,
-            UserId: req.payload.userId
-          };
-
-          if(req.payload.bet == 'battle')
-            bet.battle = req.payload.betId
-          else if (req.payload.bet == 'bet')
-            bet.BetId = req.payload.betId
-          else {
-            reply("'bet' parameter must be 'battle' or 'bet'.").code(400);
-            return;
-          }
-
-          Transaction.getMoney(bet.UserId)
-            .then((money) => {
-              if (money === null)
-                return Promise.reject({
-                  err: `User ${bet.UserId} does not exist.`,
-                  code: 404
-                });
-              else if (money - bet.amount < 0)
-                return Promise.reject({
-                  err: `Not enough money (available funds = ${money})`,
-                  code: 402
-                });
-              else
-                return bet;
-            })
-            .then((bet) => {
-              if (bet.battle !== undefined)
-                // TODO: check if battle exists
-                // TODO: check if battle is not started
-                return Promise.resolve(bet);
-              else
-                // TODO: check if bet has no result.
-                return Promise.resolve(bet);
-            })
-            .then((bet) => Bet.create(bet).catch((err) => {
-                return Promise.reject({
-                  err: `Bet ${bet.BetId} does not exist.`,
-                  code: 404
-                });
-            }))
-            .then((bet) => {
-              return Transaction.create({amount: -bet.amount, UserId: bet.UserId})
-                .then((t) => bet)
-                .catch((err) => reply(err).code(500));
-            })
-            .then((bet) => {
-              reply(bet).code(201);
-            })
-            .catch((err) => {
-              console.log(err);
-              reply(err.err).code(err.code)
-            });
-        },
-        config: {
-            tags: ['api'],
-            description: 'add a new bet',
-            validate: {
-                payload: {
-                    userId: Joi.number().integer().required(),
-                    bet: Joi.string().required(),
-                    betId: Joi.number().integer().required(),
-                    amount: Joi.number().required(), // TODO: Check > 0
-                    choice: Joi.boolean().required(),
-
-                }
-            },
-            plugins: {'hapi-swagger': {responses: {
-                201: { description: 'new bet Created'},
-                400: {description: 'bad type'},
-                404: {description: 'id not found'}
-            }}}
-            }
-
-  });
+  // Routes covered in this module:
+  // - /bets
+  //  + GET: list of bets (default: bets that can still be bet on)
+  // - /bets/{id}
+  //  + GET: info about given bet
+  //  TODO+ PATCH/PUT?
+  //  TODO+ DELETE?
+  // - /bets/{id}/bets
+  //  + GET: list of sub-bets
+  //  TODO+ POST: place a bet on this bet
 
   server.route({
-        method: 'GET',
-        path: '/battles/{id}/odd',
-        handler: (req, reply) => {
-          //TODO check if battle exist
-          Bet.getOdd('battle', req.params.id,req.query.amount).then( odd =>{
-            reply(odd).code(200);
-          });
-        },
+    method: 'GET',
+    path: '/bets',
+    handler: (req, reply) => {
+      Bet.getAll(req.query)
+        .then((bets) => reply(bets).code(200));
+    },
 
-        config: {
-            tags: ['api'],
-            description: 'get odd on a certain bet on a battle',
-            validate: {
-                params: {
-                    id: Joi.number().integer().required()
-                },
-                query: {
-                    amount: Joi.number().integer()
-                }
-
-            },
-            plugins: {
-                'hapi-swagger': {
-                    'responses': {
-                        200: {
-                            description: 'Success',
-                            schema: Joi.array().items(Joi.number())//tod joi sequelize
-                        }
-                    }
-                }
-            }
-          }
-    });
-
-  server.route({
-      method: 'GET',
-      path: '/bets/{id}/odd',
-      handler: (req, reply) => {
-        //TODO check if bet exist
-        Bet.getOdd('bet', req.params.id,req.query.amount).then( odd =>{
-            reply(odd).code(200);
-          });
+    config: {
+      tags: ['api'],
+      description: 'List all bets',
+      validate: {
+        query: {
+          isFinished: Joi.boolean().default(false),
+          isStarted: Joi.boolean().default(false).
+          limit: Joi.number().integer().positive().max(100).default(20)
+        }
       },
-
-      config: {
-          tags: ['api'],
-          description: 'get odd on a certain bet on another bet',
-          validate: {
-              params: {
-                  id: Joi.number().integer().required()
-              },
-              query: {
-                  amount: Joi.number().integer()
-              }
-
-          },
-          plugins: {
-              'hapi-swagger': {
-                  'responses': {
-                      200: {
-                          description: 'Success',
-                          schema: Joi.array().items(Joi.number())//tod joi sequelize
-                      }
-                  }
-              }
+      plugins: {
+        'hapi-swagger': {
+          'responses': {
+            200: {
+              description: 'Success',
+              schema: Joi.array().items(J.Bet.joi()) // TODO: add relations
+            }
           }
         }
+      }
+    }
+  });
+
+  server.route({
+    method: 'GET',
+    path: '/bets/{id}',
+    handler: (req, reply) => {
+      Bet.get(req.params.id)
+        .then((bet) => reply(bet).code(200))
+        .catch((err) => reply(err).code(err.code));
+    },
+
+    config: {
+      tags: ['api'],
+      description: 'Get a bet',
+      validate: {
+        params: {
+          id: Joi.number().integer().positive().required()
+        }
+      },
+      plugins: {
+        'hapi-swagger': {
+          'responses': {
+            // TODO: add 404
+            200: {
+              description: 'Success',
+              schema: J.Bet.joi() // TODO: add relations
+            }
+          }
+        }
+      }
+    }
+  });
+
+  server.route({
+    method: 'GET',
+    path: '/bets/{id}/bets',
+    handler: (req, reply) => {
+      Bet.get(req.params.id)
+        .then((bet) => bet.getBets())
+        .then((bets) => reply(bets).code(200))
+        .catch((err) => reply(err).code(err.code));
+    },
+
+    config: {
+      tags: ['api'],
+      description: 'List all bets made on a certain bet',
+      validate: {
+        params: {
+          id: Joi.number().integer().positive().required()
+        }
+      },
+      plugins: {
+        'hapi-swagger': {
+          'responses': {
+            // TODO: add 404
+            200: {
+              description: 'Success',
+              schema: Joi.array().items(J.Bet.joi()) // TODO: add relations
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // TODO: move to POST /battle|bets/{id}/bets
+  server.route({
+    method: 'POST',
+    path: '/bets',
+    handler: (req, reply) => {
+      let bet = {
+        amount: req.payload.amount,
+        choice: req.payload.choice,
+        UserId: req.payload.userId
+      };
+
+      if(req.payload.bet == 'battle')
+        bet.battle = req.payload.betId
+      else if (req.payload.bet == 'bet')
+        bet.BetId = req.payload.betId
+      else {
+        reply("'bet' parameter must be 'battle' or 'bet'.").code(400);
+        return;
+      }
+
+      Transaction.getMoney(bet.UserId)
+        .then((money) => {
+          if (money === null)
+            return Promise.reject({
+              err: `User ${bet.UserId} does not exist.`,
+              code: 404
+            });
+          else if (money - bet.amount < 0)
+            return Promise.reject({
+              err: `Not enough money (available funds = ${money})`,
+              code: 402
+            });
+          else
+            return bet;
+        })
+        .then((bet) => {
+          if (bet.battle !== undefined)
+            // TODO: check if battle exists
+            // TODO: check if battle is not started
+            return Promise.resolve(bet);
+          else
+            // TODO: check if bet has no result.
+            return Promise.resolve(bet);
+        })
+        .then((bet) => Bet.create(bet).catch((err) => {
+          return Promise.reject({
+            err: `Bet ${bet.BetId} does not exist.`,
+            code: 404
+          });
+        }))
+        .then((bet) => {
+          return Transaction.create({amount: -bet.amount, UserId: bet.UserId})
+            .then((t) => bet)
+            .catch((err) => reply(err).code(500));
+        })
+        .then((bet) => {
+          reply(bet).code(201);
+        })
+        .catch((err) => {
+          console.log(err);
+          reply(err.err).code(err.code)
+        });
+    },
+    config: {
+      tags: ['api'],
+      description: 'add a new bet',
+      validate: {
+        payload: {
+          userId: Joi.number().integer().required(),
+          bet: Joi.string().required(),
+          betId: Joi.number().integer().required(),
+          amount: Joi.number().required(), // TODO: Check > 0
+          choice: Joi.boolean().required(),
+
+        }
+      },
+      plugins: {'hapi-swagger': {responses: {
+        201: { description: 'new bet Created'},
+        400: {description: 'bad type'},
+        404: {description: 'id not found'}
+      }}}
+    }
+
+  });
+
+  // TODO???: move to GET /battles/{id} (as property of battle object)
+  server.route({
+    method: 'GET',
+    path: '/battles/{id}/odd',
+    handler: (req, reply) => {
+      //TODO check if battle exist
+      Bet.getOdd('battle', req.params.id,req.query.amount).then( odd =>{
+        reply(odd).code(200);
+      });
+    },
+
+    config: {
+      tags: ['api'],
+      description: 'get odd on a certain bet on a battle',
+      validate: {
+        params: {
+          id: Joi.number().integer().required()
+        },
+        query: {
+          amount: Joi.number().integer()
+        }
+
+      },
+      plugins: {
+        'hapi-swagger': {
+          'responses': {
+            200: {
+              description: 'Success',
+              schema: Joi.array().items(Joi.number())//tod joi sequelize
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // TODO???: move to GET /bets/{id} (as property of bet object)
+  server.route({
+    method: 'GET',
+    path: '/bets/{id}/odd',
+    handler: (req, reply) => {
+      //TODO check if bet exist
+      Bet.getOdd('bet', req.params.id,req.query.amount).then( odd =>{
+        reply(odd).code(200);
+      });
+    },
+
+    config: {
+      tags: ['api'],
+      description: 'get odd on a certain bet on another bet',
+      validate: {
+        params: {
+          id: Joi.number().integer().required()
+        },
+        query: {
+          amount: Joi.number().integer()
+        }
+
+      },
+      plugins: {
+        'hapi-swagger': {
+          'responses': {
+            200: {
+              description: 'Success',
+              schema: Joi.array().items(Joi.number())//tod joi sequelize
+            }
+          }
+        }
+      }
+    }
   });
 
 
-	return next();
-
+  return next();
 };
 
 module.exports.register.attributes = {

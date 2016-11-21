@@ -27,5 +27,52 @@ module.exports = (db, DataTypes) => db.define('Bet', {
   result: {
     type: DataTypes.BOOLEAN
   }
+}, {
+  classMethods: {
+    associate: function(models) {
+      this.hasOne(this);
+    },
+
+    get: function(id) {
+      return this
+        .findOne({where: {id: id}})
+        .then((bet) => {
+          if (bet === null)
+            throw {
+              err: `Bet ${id} not found.`,
+              code: 404
+            };
+          else
+            return bet;
+        });
+    },
+
+    getAll: function(query) {
+      query = query || {};
+      query.isFinished = query.isFinished || false;
+      query.isStarted = query.isStarted || false;
+
+      const where = {}; // TODO
+      return this.findAll({where: where})
+    }
+  },
+
+  instanceMethods: {
+    getBets: function() {
+      return this.$Model
+        .findAll({where: {BetId: this.id}});
+    },
+
+    getOdds: function() {
+      return this
+        .getBets()
+        .then((bets) => bets.reduce(([win, lose], bet) => {
+          if (bet.choice)
+            return [win+bet.amount, lose];
+          else
+            return [win, lose+bet.amount];
+        }), [0, 0]);
+    }
+  }
 });
 

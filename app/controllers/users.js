@@ -3,18 +3,33 @@
 const Joi = require('joi');
 
 module.exports.register = (server, options, next) => {
-  const User = server.app.DB.User;
+  const User = server.app.db.User;
+  const J = server.app.joi;
 
-  // GET /users
+  // Routes covered in this module:
+  // - /users
+  //  + GET?: list users
+  //  + POST: create user account
+  // - /users/{id}
+  //  + GET
+  //  + DELETE
+  // - /users/{id}/bets
+  //  TODO+ GET
+  // - /users/{id}/stats
+  //  TODO+ GET
+  // - /users/{id}/transactions (only visible to user)
+  //  TODO+ GET
+  //  TODO+ POST
+  // - /users/{id}/balance (only visible to user)
+  //  TODO+ GET
+
   server.route({
     method: 'GET',
     path: '/users',
     handler: (req, reply) => {
       User.findAll({
         //attributes:['name', 'mail']
-      }).then(function(users){
-        reply(users).code(200);
-      })
+      }).then((users) => reply(users).code(200));
     },
 
     config: {
@@ -31,7 +46,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: Joi.array().items(Joi.string())
+              schema: Joi.array().items(J.User.joi()) // TODO: verify
             }
           }
         }
@@ -48,11 +63,10 @@ module.exports.register = (server, options, next) => {
         where:{
           id: req.params.id
         }
-      }).then(function(user){
-        if (user == null){
-          reply().code(404);
-        }else reply(user).code(200);
-      })
+      }).then((user) => {
+        if (user == null) reply().code(404);
+        else reply(user).code(200);
+      });
     },
 
     config: {
@@ -86,14 +100,12 @@ module.exports.register = (server, options, next) => {
         where:{
           id:req.params.id
         }
-      }).then(function(n){
-        if (n == 1){
-          reply().code(200);
-        } else {
-          reply().code(404);
-        }
-      })
+      }).then((n) => {
+        if (n == 1) reply().code(200);
+        else reply().code(404);
+      });
     },
+
     config: {
       tags: ['api'],
       description: 'List all users',
@@ -124,10 +136,9 @@ module.exports.register = (server, options, next) => {
         name: req.payload.name,
         mail: req.payload.mail,
         password: req.payload.password
-        }).then(function(new_user){
-          reply(new_user['id']).code(201);
-        })
+      }).then((user) => reply(user['id']).code(201));
     },
+
     config: {
         tags: ['api'],
         description: 'add a new user',

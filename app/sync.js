@@ -5,7 +5,7 @@ const request = require('request-json');
 module.exports.register = (server, options, next) => {
   // TODO: Extract API URL to global variable
   const client = request.createClient('http://pokemon-battle.bid/api/v1/');
-  const Bet = server.app.DB.Bet;
+  const Bet = server.app.db.Bet;
 
   function sync(bet) {
     // TODO: refactor as Promise

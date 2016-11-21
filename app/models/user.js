@@ -13,5 +13,12 @@ module.exports = (db, DataTypes) => db.define('User', {
   money: {
     type: DataTypes.FLOAT
   }
+}, {
+  classMethods: {
+    associate: function(models) {
+      this.hasMany(models.Bet);
+      this.hasMany(models.Transaction);
+    }
+  }
 });
 
