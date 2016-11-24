@@ -1,61 +1,38 @@
-'use strict';
-const request = require('request-json');
-// TODO: Extract API URL to global variable
-const client = request.createClient('http://pokemon-battle.bid/api/v1/');
+'use strict'
 
-class Trainer {
-  constructor(trainer) {
-    this.id = trainer.id;
-    this.name = trainer.name;
-    this.gender = trainer.gender
-    this.country = trainer.country_code.toLowerCase();
-  }
+module.exports = (db, DataTypes) => db.define('Trainer', {
+  id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    primaryKey: true
+  },
 
-  // TODO: filter by country/gender ?
-  static getAll() {
-    let trainers = [];
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
 
-    const loop = (result) => {
-      if (result.res.statusCode !== 200)
-        throw {
-          err: 'Unknown error',
-          code: 500
-        };
+  gender: {
+    type: DataTypes.ENUM,
+    values: ['male', 'female'],
+    allowNull: false
+  },
 
-      trainers = trainers.concat(result.body);
-      console.log(trainers.length);
-      if (result.body.length < 100)
-        return trainers.map((trainer) => new Trainer(trainer));
-      else
-        return client.get(`trainers?limit=100&offset=${trainers.length}`)
-        .then(loop);
-    };
-
-    return client.get(`trainers?limit=100`).then(loop);
-  }
-
-  static get(id) {
-    return client.get(`trainers/${id}`)
-      .then((result) => {
-        if (result.res.statusCode === 200)
-          return new this(result.body);
-        else
-          throw {
-            err: `Trainer ${id} does not exist.`,
-            code: 404
-          };
-      });
-  }
-
-  static associate(models) {
-    // TODO: add isFinished/isStarted
-    this.prototype.getBattles = function() {
-      return models.Battle.getAll({})
-        .then((battles) =>
-          battles.filter((battle) => battle.trainers.includes(this.id))
-        );
+  country: {
+    type: DataTypes.STRING(2),
+    validate: { isLowercase: true },
+    len: 2,
+    allowNull: false,
+    set: function (val) {
+      this.setDataValue('country', val.toLowerCase())
     }
   }
-}
+}, {
+  classMethods: {
+    associate: function (models) {
+      this.hasMany(models.Battle, {as: 'Team1'})
+      this.hasMany(models.Battle, {as: 'Team2'})
+    }
+  }
+})
 
-module.exports = Trainer;

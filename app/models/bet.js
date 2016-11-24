@@ -1,78 +1,100 @@
-'use strict';
+'use strict'
 
 module.exports = (db, DataTypes) => db.define('Bet', {
-  date: {
-    type: DataTypes.DATE
-  },
-
-  // If this is a 1st order bet, battle is the ID (from pokemon-battle.bid) on
-  // which it is based. For higher-order bets, this field is NULL.
-  battle: {
-    type: DataTypes.INTEGER
-  },
-
-  amount: {
-    type: DataTypes.INTEGER
-  },
-
   // The result the user expects from this bet:
-  // "true" means Trainer1 wins the battle OR the parent bet was correct.
+  // 1 = Trainer 1 wins / parent bet was right
+  // 2 = Trainer 2 wins / parent bet was wrong
   choice: {
-    type: DataTypes.BOOLEAN
+    type: DataTypes.INTEGER,
+    validate: {
+      min: 1,
+      max: 2
+    },
+    allowNull: false
   },
 
-  // Same convention as choice. "true" doesn't mean the better was right!
-  // Instead, it gives the result of the parent bet/battle. The better was
-  // right if choice == result.
+  // Same convention as choice.
+  // The bet is won if choice == result.
+  // null = battle isn't finished yet (or hasn't been synced).
   result: {
-    type: DataTypes.BOOLEAN
+    type: DataTypes.INTEGER,
+    validate: {
+      min: 1,
+      max: 2
+    },
+    allowNull: true
+  },
+
+  // Virtual column, as a shortcut to check if the bet has been won.
+  // null = battle isn't finished yet (or hasn't been synced).
+  won: {
+    type: DataTypes.VIRTUAL(DataTypes.BOOLEAN, ['choice', 'result']),
+    get: function () {
+      return (this.result === null)
+        ? null
+        : this.result === this.choice
+    }
   }
+
 }, {
   classMethods: {
-    associate: function(models) {
-      this.hasOne(this);
-    },
+    associate: function (models) {
+      this.belongsTo(this, { as: 'Parent', foreignKey: 'ParentId' })
+      this.hasMany(this, { as: 'Bet', foreignKey: 'ParentId' })
 
-    get: function(id) {
-      return this
-        .findOne({where: {id: id}})
-        .then((bet) => {
-          if (bet === null)
-            throw {
-              err: `Bet ${id} not found.`,
-              code: 404
-            };
-          else
-            return bet;
-        });
-    },
+      this.belongsTo(models.Battle, { foreignKey: { allowNull: false } })
+      this.belongsTo(models.User, { foreignKey: { allowNull: false } })
 
-    getAll: function(query) {
-      query = query || {};
-      query.isFinished = query.isFinished || false;
-      query.isStarted = query.isStarted || false;
+      this.belongsTo(models.Transaction, { foreignKey: { allowNull: false } })
+      this.belongsTo(models.Transaction, { as: 'WinTransaction' })
 
-      const where = {}; // TODO
-      return this.findAll({where: where})
+      this.addScope('active', function () {
+        return {
+          include: [{
+            model: models.Battle,
+            where: {
+              startTime: { $gt: new Date() }
+            }
+          }]
+        }
+      })
+
+      this.addScope('started', function () {
+        return {
+          include: [{
+            model: models.Battle,
+            where: {
+              startTime: { $lte: new Date() },
+              endTime: { $gt: new Date() }
+            }
+          }]
+        }
+      })
+
+      this.addScope('finished', function () {
+        return {
+          include: [{
+            model: models.Battle,
+            where: {
+              endTime: { $lte: new Date() }
+            }
+          }]
+        }
+      })
     }
   },
 
   instanceMethods: {
-    getBets: function() {
-      return this.$Model
-        .findAll({where: {BetId: this.id}});
-    },
-
-    getOdds: function() {
+    getOdds: function () {
       return this
-        .getBets()
-        .then((bets) => bets.reduce(([win, lose], bet) => {
-          if (bet.choice)
-            return [win+bet.amount, lose];
-          else
-            return [win, lose+bet.amount];
-        }), [0, 0]);
+        .getBet({ include: this.Model.associations.Transaction })
+        .then((bets) =>
+          bets.reduce(([win, lose], bet) =>
+            (bet.choice === 1)
+              ? [win - bet.Transaction.amount, lose]
+              : [win, lose - bet.Transaction.amount],
+            [0, 0]))
     }
   }
-});
+})
 
