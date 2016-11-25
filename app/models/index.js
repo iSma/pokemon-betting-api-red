@@ -1,6 +1,7 @@
 'use strict'
 
 const Sequelize = require('sequelize')
+const Joi = require('joi')
 const JoiSequelize = require('joi-sequelize')
 
 module.exports.register = (server, options, next) => {
@@ -12,12 +13,23 @@ module.exports.register = (server, options, next) => {
       dialect: 'postgres',
       port: 5432,
       define: {
-        timestamps: false
+        timestamps: false,
+        classMethods: {
+          // Checks if an object is not null, throws a 404 error otherwise.
+          // Intended to be used in a promise chain, right after .findById(id)
+          check404: function (object) {
+            return (object)
+              ? Promise.resolve(object)
+              : Promise.reject({ error: `${this.name} not found`, code: 404 })
+          }
+        }
       }
     })
 
   server.app.db = db
-  server.app.joi = {};
+  server.app.joi = {
+    ID: Joi.number().integer().positive()
+  };
 
   ['battle', 'bet', 'trainer', 'user', 'transaction']
     .map((name) => `./${name}.js`)
@@ -31,7 +43,7 @@ module.exports.register = (server, options, next) => {
     db.models[model].associate(db.models)
   }
 
-  db.sync({ force: true }).then(() => {
+  db.sync({ force: false }).then(() => {
     console.log('Database synced')
     return next()
   })

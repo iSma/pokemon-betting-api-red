@@ -53,6 +53,39 @@ module.exports = (db, DataTypes) => db.define('User', {
       return this.Model.associations.Transactions.target
         .sum('amount', { where: { UserId: this.id } })
         .then((money) => +money)
+    },
+
+    placeBet: function (event, amount, choice) {
+      const onBet = event.Model === this.Model.associations.Bets.target
+
+      return Promise.resolve(onBet ? event.getBattle() : event)
+        .then((battle) =>
+          battle.active
+            ? true
+            : Promise.reject({
+              error: `Battle ${battle.id} has already started`,
+              code: 418
+            }))
+        .then(() => this.getMoney())
+        .then((money) =>
+          money >= amount
+            ? true
+            : Promise.reject({
+              error: `Not enough money (available funds: ${money})`,
+              code: 402
+            })) // TODO: check if event is active
+        .then(() =>
+          db.transaction((t) =>
+            this
+              .createTransaction({ amount: amount }, { transaction: t })
+              .then((transaction) =>
+                this.createBet({
+                  choice: choice,
+                  BattleId: onBet ? event.BattleId : event.id,
+                  ParentId: onBet ? event.id : null,
+                  TransactionId: transaction.id
+                }, { transaction: t }))
+          ))
     }
   },
 

@@ -30,7 +30,6 @@ const manifest = {
     { plugin: './controllers/battles' },
     { plugin: './controllers/bets' },
     { plugin: './controllers/graph' },
-    { plugin: './controllers/transactions' },
     // ...
   ]
 };
