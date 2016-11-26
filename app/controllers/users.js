@@ -144,7 +144,13 @@ module.exports.register = (server, options, next) => {
           pass: req.payload.pass
         })
         .then((user) => reply({ id: user.id }).code(201)) // TODO: send token here?
-        .catch((err) => reply(err).code(500)) // TODO: check validation errors
+        .catch((err) =>
+          err.name !== 'SequelizeUniqueConstraintError'
+            ? Promise.reject(err) // Unknown error
+            : Boom.badData(err.errors.map((e) =>
+              `${e.path} "${e.value}" already exists`).join('\n'))
+        )
+        .then(reply)
     },
 
     config: {
@@ -162,10 +168,12 @@ module.exports.register = (server, options, next) => {
         'hapi-swagger': {
           responses: {
             201: {
-              description: 'User created'
+              description: 'User created',
+              schema: Joi.object({ id: J.ID })
             },
-            500: {
-              description: 'Error'
+            422: {
+              description: 'User name or mail already exists',
+              schema: Joi.object()
             }
           }
         }
