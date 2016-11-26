@@ -1,79 +1,137 @@
-'use strict';
-const request = require('request-json');
-// TODO: Extract API URL to global variable
-const client = request.createClient('http://pokemon-battle.bid/api/v1/');
+'use strict'
 
-class Battle {
-  constructor(battle) {
-    this.id = battle.id;
-    this.startTime = battle.start_time;
-    this.endTime = battle.end_time;
-    this.trainers = [battle.team1.trainer.id, battle.team2.trainer.id];
+module.exports = (db, DataTypes) => db.define('Battle', {
+  id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    primaryKey: true
+  },
 
-    this.result = battle.winner ?
-      battle.team1.trainer.id == battle.winner.trainer_id : null;
+  startTime: {
+    type: DataTypes.DATE,
+    allowNull: false
+  },
 
-    this.pokemons = [
-      battle.team1.pokemons.map((pkmn) => pkmn.id),
-      battle.team2.pokemons.map((pkmn) => pkmn.id)
-    ];
-  }
+  endTime: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
 
-  // TODO: make faster
-  static getAll(query) {
-    query = query || {};
-    query.isFinished = query.isFinished || false;
-    query.isStarted = query.isStarted || false;
+  result: {
+    type: DataTypes.INTEGER,
+    validate: {
+      min: 1,
+      max: 2
+    },
+    allowNull: true
+  },
 
-    let battles = [];
-    const loop = (result) => {
-      if (result.res.statusCode !== 200)
-        throw {
-          err: 'Unknown error',
-          code: 500
-        };
+  active: {
+    type: DataTypes.VIRTUAL(DataTypes.BOOLEAN, ['startTime']),
+    get: function () {
+      const now = new Date()
+      return this.startTime > now
+    }
+  },
 
-      battles = battles.concat(result.body);
-      if (result.body.length < 100)
-        return battles.map((battle) => new this(battle));
-      else
-        return client
-        .get(`battles?is_finished=${query.isFinished}&limit=100&offset=${battles.length}`)
-        .then(loop);
-    };
+  started: {
+    type: DataTypes.VIRTUAL(DataTypes.BOOLEAN, ['startTime']),
+    get: function () {
+      const now = new Date()
+      return this.startTime <= now && this.endTime > now
+    }
+  },
 
-    const now = new Date();
-    return client
-      .get(`battles?is_finished=${query.isFinished}&limit=100`)
-      .then(loop)
-      .then((battles) =>
-        battles.filter((battle) =>
-          (Date.parse(battle.startTime) < now) == query.isStarted
-        )
-      )
-  }
-
-  static get(id) {
-    return client.get(`battles/${id}`)
-      .then((result) => {
-        if (result.res.statusCode === 200)
-          return new this(result.body);
-        else
-          throw {
-            err: `Battle ${id} does not exist.`,
-            code: 404
-          };
-      });
-  }
-
-  static associate(models) {
-    this.prototype.getBets = function() {
-      return models.Bet.findAll({
-        attributes: ['id', 'battle', 'result', 'createdAt'],
-        where: {battle: this.id}
-      });
+  finished: {
+    type: DataTypes.VIRTUAL(DataTypes.BOOLEAN, ['endTime']),
+    get: function () {
+      const now = new Date()
+      return this.endTime <= now
     }
   }
-}
 
-module.exports = Battle;
+}, {
+  classMethods: {
+    associate: function (models) {
+      this.hasMany(models.Bet, {foreignKey: {allowNull: false}})
+
+      this.addScope('active', function () {
+        return {
+          where: {
+            startTime: { $gt: new Date() }
+          }
+        }
+      })
+
+      this.addScope('started', function () {
+        return {
+          where: {
+            startTime: { $lte: new Date() },
+            endTime: { $gt: new Date() }
+          }
+        }
+      })
+
+      this.addScope('finished', function () {
+        return {
+          where: {
+            endTime: { $lte: new Date() }
+          }
+        }
+      })
+    },
+
+    fromApi: function (battle) {
+      return {
+        id: battle.id,
+        startTime: new Date(battle.start_time),
+        endTime: battle.end_time ? new Date(battle.end_time) : null,
+        result:
+          battle.winner
+          ? 1 + (battle.winner.trainer_id !== battle.team1.trainer.id)
+          : null
+        // TODO: add trainers
+      }
+    }
+  },
+
+  instanceMethods: {
+    // Sync this battle with remote API
+    syncRemote: function () {
+      return db.client
+        .get(`battles/${this.id}`)
+        .then((res) =>
+          res.res.statusCode === 200
+            ? res.body
+            : Promise.reject(res.res)) // TODO
+        .then((battle) => this.Model.fromApi(battle))
+        .then((battle) => this.set(battle))
+        .then(() =>
+          this.changed('result')
+            ? db.transaction((t) => {
+              return this
+                .save({ transaction: t })
+                .then(() => this.getBets({ transaction: t }))
+                .then((bets) => bets.map((b) => b.updateResult(this.result, t)))
+                .then((updates) => Promise.all(updates))
+            })
+            : this.save()
+        )
+        .then(() => this)
+    },
+
+    scheduleSync: function () {
+      const now = new Date()
+      if (this.result) {
+        return
+      } else if (!this.endTime) {
+        const next = Math.max(0, this.startTime - now) + 10 * 1000
+        setTimeout(() => this.syncRemote().then(() => this.scheduleSync()), next)
+      } else {
+        const next = Math.max(0, this.endTime - now) + 10 * 1000
+        setTimeout(() => this.syncRemote().then(() => this.scheduleSync()), next)
+      }
+    }
+  }
+})
+

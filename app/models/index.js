@@ -1,7 +1,9 @@
-'use strict';
+'use strict'
 
-const Sequelize = require('sequelize');
-const JoiSequelize = require('joi-sequelize');
+const Sequelize = require('sequelize')
+const Joi = require('joi')
+const JoiSequelize = require('joi-sequelize')
+const request = require('request-json')
 
 module.exports.register = (server, options, next) => {
   const db = new Sequelize(
@@ -10,37 +12,48 @@ module.exports.register = (server, options, next) => {
     process.env.POSTGRES_PASSWORD, {
       host: process.env.POSTGRES_HOST,
       dialect: 'postgres',
-      port:5432
-    });
+      port: 5432,
+      define: {
+        timestamps: false,
+        classMethods: {
+          // Checks if an object is not null, throws a 404 error otherwise.
+          // Intended to be used in a promise chain, right after .findById(id)
+          check404: function (object) {
+            return (object)
+              ? Promise.resolve(object)
+              : Promise.reject({ error: `${this.name} not found`, code: 404 })
+          }
+        }
+      }
+    })
 
-  server.app.db = {};
-  server.app.joi = {};
+  db.client = request.createClient('http://pokemon-battle.bid/api/v1/')
 
-  ['user', 'bet', 'transaction']
+  server.app.db = db
+  server.app.joi = {
+    ID: Joi.number().integer().positive()
+  };
+
+  ['battle', 'bet', 'trainer', 'user', 'transaction']
     .map((name) => `./${name}.js`)
     .forEach((file) => {
-      const model = db.import(file);
-      const joi = new JoiSequelize(require(file));
+      const model = db.import(file)
+      const joi = new JoiSequelize(require(file))
+      server.app.joi[model.name] = joi
+    })
 
-      server.app.db[model.name] = model;
-      server.app.joi[model.name] = joi;
-    });
+  for (const model in db.models) {
+    db.models[model].associate(db.models)
+  }
 
-  ['battle', 'trainer']
-    .map((name) => `./${name}.js`)
-    .forEach((file) => {
-      const model = require(file);
-      server.app.db[model.name] = model;
-    });
-
-  for (const model in server.app.db)
-    server.app.db[model].associate(server.app.db);
-
-  db.sync(/*{ force: true }*/).then(() => next());
+  db.sync({ force: false }).then(() => {
+    console.log('Database synced')
+    return next()
+  })
 }
 
 module.exports.register.attributes = {
   name: 'models',
   version: '1.0.0'
-};
+}
 

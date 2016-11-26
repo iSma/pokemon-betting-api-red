@@ -1,34 +1,19 @@
-'use strict';
+'use strict'
 
 module.exports = (db, DataTypes) => db.define('Transaction', {
   amount: {
-    type: DataTypes.INTEGER
-  },
+    type: DataTypes.DECIMAL(8, 2),
+    allowNull: false
+  }
+
 }, {
   classMethods: {
-    associate: function(models) {
-      this.belongsTo(models.Bet);
-    },
+    associate: function (models) {
+      this.hasOne(models.Bet, { foreignKey: { allowNull: false } })
+      this.hasOne(models.Bet, { as: 'WinTransaction' })
 
-    // TODO: Move this to user instance method
-    getMoney: function(userId) {
-      const p =
-        this
-        .sum('amount', { where:{ UserId: userId }})
-        .then((amount) => {
-          if (!isNaN(amount))
-            return amount;
-
-          return User.findOne({ where:{ id: userId } })
-            .then((user)=> {
-              if (user !== null) return 0;
-              else return null;
-            })
-        });
-
-      return Promise.resolve(p);
+      this.belongsTo(models.User, { foreignKey: { allowNull: false } })
     }
   }
-});
-
+})
 
