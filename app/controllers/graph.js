@@ -16,17 +16,29 @@ module.exports.register = (server, options, next) => {
   }
 
   function node (event) {
+    let node, label, shape, color
     if (event.Model === Battle) {
-      const node = `battles/${event.id}`
-      const label = `${event.id}\nresult:${event.result}`
-      const color = event.result === null ? 'white' : event.result === 1 ? 'cyan' : 'yellow'
-      return `"${node}"[shape=invhouse,label="${label}",style=filled,fillcolor=${color}]`
+      node = `battles/${event.id}`
+      label = `${event.id}\n`
+        + `result:${event.result}`
+      shape = 'invhouse'
+      color = event.result === null
+        ? 'white'
+        : event.result === 1 ? 'cyan' : 'yellow'
     } else {
-      const node = `bets/${event.id}`
-      const label = `${event.id}\nusers/${event.UserId}\nchoice:${event.choice}\nresult:${event.result}`
-      const color = event.won === null ? 'white' : event.won ? 'green' : 'red'
-      return `"${node}"[shape=box,label="${label}",style=filled,fillcolor=${color}]`
+      node = `bets/${event.id}`
+      label =
+        `${event.id}\n`
+        + `users/${event.UserId}\n`
+        + `choice:${event.choice}\n`
+        + `result:${event.result}`
+      shape = 'note'
+      color = event.won === null
+        ? 'white'
+        : event.won ? 'green' : 'red'
     }
+
+    return `"${node}"[shape=${shape},label="${label}",style=filled,fillcolor=${color}]`
   }
 
   function edge (bet) {
@@ -48,7 +60,7 @@ module.exports.register = (server, options, next) => {
         .scope(req.query.status)
         .findAll()
         .then(graph)
-        .then((graph) => reply(graph).code(200))
+        .then(reply)
     },
 
     config: {
