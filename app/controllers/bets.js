@@ -26,7 +26,7 @@ module.exports.register = (server, options, next) => {
       Bet
         .scope(req.query.status)
         .findAll()
-        .then((bets) => reply(bets).code(200))
+        .then(reply)
     },
 
     config: {
@@ -60,8 +60,8 @@ module.exports.register = (server, options, next) => {
       Bet
         .findById(req.params.id)
         .then((bet) => Bet.check404(bet))
-        .then((bet) => reply(bet).code(200))
-        .catch((err) => reply(err).code(err.code))
+        .then(reply)
+        .catch(reply)
     },
 
     config: {
@@ -98,8 +98,8 @@ module.exports.register = (server, options, next) => {
         .findById(req.params.id)
         .then((bet) => Bet.check404(bet))
         .then((bet) => bet.getBets())
-        .then((bets) => reply(bets).code(200))
-        .catch((err) => reply(err).code(err.code))
+        .then(reply)
+        .catch(reply)
     },
 
     config: {
@@ -137,8 +137,8 @@ module.exports.register = (server, options, next) => {
         Bet.findById(req.params.id).then((bet) => Bet.check404(bet))
       ])
         .then(([user, bet]) => user.placeBet(bet, req.payload.amount, req.payload.choice))
-        .then((bet) => reply(bet).code(200))
-        .catch((err) => reply(err).code(err.code))
+        .then(reply)
+        .catch(reply)
     },
 
     config: {
@@ -151,20 +151,24 @@ module.exports.register = (server, options, next) => {
         }
       },
 
-      plugins: {'hapi-swagger': {responses: {
-        201: {
-          description: 'New bet created'
-        },
-        402: {
-          description: 'Insufficient funds'
-        },
-        418: {
-          description: 'Battle has already started'
-        },
-        404: {
-          description: 'Bet not found'
+      plugins: {
+        'hapi-swagger': {
+          responses: {
+            201: {
+              description: 'New bet created'
+            },
+            402: {
+              description: 'Insufficient funds'
+            },
+            404: {
+              description: 'Bet not found'
+            },
+            410: {
+              description: 'Battle has already started'
+            }
+          }
         }
-      }}}
+      }
     }
   })
 
@@ -176,8 +180,8 @@ module.exports.register = (server, options, next) => {
         .findById(req.params.id)
         .then((bet) => Bet.check404(bet))
         .then((bet) => bet.getOdds())
-        .then((odds) => reply(odds).code(200))
-        .catch((err) => reply(err).code(err.code))
+        .then(reply)
+        .catch(reply)
     },
 
     config: {

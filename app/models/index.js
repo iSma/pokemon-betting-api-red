@@ -4,6 +4,7 @@ const Sequelize = require('sequelize')
 const Joi = require('joi')
 const JoiSequelize = require('joi-sequelize')
 const request = require('request-json')
+const Boom = require('boom')
 
 module.exports.register = (server, options, next) => {
   const db = new Sequelize(
@@ -21,7 +22,7 @@ module.exports.register = (server, options, next) => {
           check404: function (object) {
             return (object)
               ? Promise.resolve(object)
-              : Promise.reject({ error: `${this.name} not found`, code: 404 })
+              : Promise.reject(Boom.notFound(`${this.name} not found`))
           }
         }
       }

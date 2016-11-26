@@ -27,7 +27,7 @@ module.exports.register = (server, options, next) => {
       Battle
         .scope(req.query.status)
         .findAll()
-        .then((battles) => reply(battles).code(200))
+        .then(reply)
     },
 
     config: {
@@ -61,8 +61,8 @@ module.exports.register = (server, options, next) => {
       Battle
         .findById(req.params.id)
         .then((battle) => Battle.check404(battle))
-        .then((battle) => reply(battle).code(200))
-        .catch((err) => reply(err).code(err.code))
+        .then(reply)
+        .catch(reply)
     },
 
     config: {
@@ -99,8 +99,8 @@ module.exports.register = (server, options, next) => {
         .findById(req.params.id)
         .then((battle) => Battle.check404(battle))
         .then((battle) => battle.getBets())
-        .then((bets) => reply(bets).code(200))
-        .catch((err) => reply(err).code(err.code))
+        .then(reply)
+        .catch(reply)
     },
 
     config: {
@@ -131,15 +131,15 @@ module.exports.register = (server, options, next) => {
 
   server.route({
     method: 'POST',
-    path: '/battle/{id}/bets',
+    path: '/battles/{id}/bets',
     handler: (req, reply) => {
       Promise.all([
         User.findById(token.id).then((user) => User.check404(user)),
-        Battle.findById(req.params.id).then((bet) => Battle.check404(bet))
+        Battle.findById(req.params.id).then((battle) => Battle.check404(battle))
       ])
-        .then(([user, bet]) => user.placeBet(bet, req.payload.amount, req.payload.choice))
-        .then((bet) => reply(bet).code(200))
-        .catch((err) => reply(err).code(err.code))
+        .then(([user, battle]) => user.placeBet(battle, req.payload.amount, req.payload.choice))
+        .then(reply)
+        .catch(reply)
     },
 
     config: {
@@ -152,20 +152,25 @@ module.exports.register = (server, options, next) => {
         }
       },
 
-      plugins: {'hapi-swagger': {responses: {
-        201: {
-          description: 'New bet created'
-        },
-        402: {
-          description: 'Insufficient funds'
-        },
-        418: {
-          description: 'Battle has already started'
-        },
-        404: {
-          description: 'Battle not found'
-        }
-      }}}
+      plugins: {
+        'hapi-swagger':
+          {
+            responses: {
+              201: {
+                description: 'New bet created'
+              },
+              402: {
+                description: 'Insufficient funds'
+              },
+              404: {
+                description: 'Battle not found'
+              },
+              410: {
+                description: 'Battle has already started'
+              }
+            }
+          }
+      }
     }
   })
 
@@ -177,8 +182,8 @@ module.exports.register = (server, options, next) => {
         .findById(req.params.id)
         .then((battle) => Battle.check404(battle))
         .then((battle) => battle.getOdds())
-        .then((odds) => reply(odds).code(200))
-        .catch((err) => reply(err).code(err.code))
+        .then(reply)
+        .catch(reply)
     },
 
     config: {
