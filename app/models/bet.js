@@ -1,4 +1,5 @@
 'use strict'
+const _ = require('lodash')
 
 module.exports = (db, DataTypes) => db.define('Bet', {
   // The result the user expects from this bet:
@@ -94,6 +95,18 @@ module.exports = (db, DataTypes) => db.define('Bet', {
               ? [win - bet.Transaction.amount, lose]
               : [win, lose - bet.Transaction.amount],
             [0, 0]))
+    },
+
+    updateResult: function (result, t) {
+      // TODO: Distribute money
+      const r = 1 + (this.choice !== result)
+      return this
+        .update({ result: result }, { transaction: t })
+        .then(() => this.getBet())
+        .then((bets) => bets.map((b) => b.updateResult(r, t)))
+        .then(_.flatMap)
+        .then((updates) => Promise.all(updates))
+        .then(() => true)
     }
   }
 })

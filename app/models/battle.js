@@ -14,7 +14,16 @@ module.exports = (db, DataTypes) => db.define('Battle', {
 
   endTime: {
     type: DataTypes.DATE,
-    allowNull: false
+    allowNull: true
+  },
+
+  result: {
+    type: DataTypes.INTEGER,
+    validate: {
+      min: 1,
+      max: 2
+    },
+    allowNull: true
   },
 
   active: {
@@ -70,6 +79,58 @@ module.exports = (db, DataTypes) => db.define('Battle', {
           }
         }
       })
+    },
+
+    fromApi: function (battle) {
+      return {
+        id: battle.id,
+        startTime: new Date(battle.start_time),
+        endTime: battle.end_time ? new Date(battle.end_time) : null,
+        result:
+          battle.winner
+          ? 1 + (battle.winner.trainer_id !== battle.team1.trainer.id)
+          : null
+        // TODO: add trainers
+      }
+    }
+  },
+
+  instanceMethods: {
+    // Sync this battle with remote API
+    syncRemote: function () {
+      return db.client
+        .get(`battles/${this.id}`)
+        .then((res) =>
+          res.res.statusCode === 200
+            ? res.body
+            : Promise.reject(res.res)) // TODO
+        .then((battle) => this.Model.fromApi(battle))
+        .then((battle) => this.set(battle))
+        .then(() =>
+          this.changed('result')
+            ? db.transaction((t) => {
+              return this
+                .save({ transaction: t })
+                .then(() => this.getBets({ transaction: t }))
+                .then((bets) => bets.map((b) => b.updateResult(this.result, t)))
+                .then((updates) => Promise.all(updates))
+            })
+            : this.save()
+        )
+        .then(() => this)
+    },
+
+    scheduleSync: function () {
+      const now = new Date()
+      if (this.result) {
+        return
+      } else if (!this.endTime) {
+        const next = Math.max(0, this.startTime - now) + 10 * 1000
+        setTimeout(() => this.syncRemote().then(() => this.scheduleSync()), next)
+      } else {
+        const next = Math.max(0, this.endTime - now) + 10 * 1000
+        setTimeout(() => this.syncRemote().then(() => this.scheduleSync()), next)
+      }
     }
   }
 })

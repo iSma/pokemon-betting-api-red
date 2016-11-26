@@ -3,6 +3,7 @@
 const Sequelize = require('sequelize')
 const Joi = require('joi')
 const JoiSequelize = require('joi-sequelize')
+const request = require('request-json')
 
 module.exports.register = (server, options, next) => {
   const db = new Sequelize(
@@ -25,6 +26,8 @@ module.exports.register = (server, options, next) => {
         }
       }
     })
+
+  db.client = request.createClient('http://pokemon-battle.bid/api/v1/')
 
   server.app.db = db
   server.app.joi = {
