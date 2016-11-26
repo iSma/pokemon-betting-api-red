@@ -53,7 +53,7 @@ module.exports = (db, DataTypes) => db.define('Battle', {
 }, {
   classMethods: {
     associate: function (models) {
-      this.hasMany(models.Bet, {foreignKey: {allowNull: false}})
+      this.hasMany(models.Bet, { foreignKey: { allowNull: false } })
 
       this.addScope('active', function () {
         return {

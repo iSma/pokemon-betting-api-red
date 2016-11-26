@@ -1,8 +1,9 @@
 'use strict'
+const Boom = require('boom')
 const Joi = require('joi')
 
 module.exports.register = (server, options, next) => {
-  const User = server.app.db.User
+  const { User } = server.app.db.models
   const J = server.app.joi
 
   // Routes covered in this module:
@@ -30,7 +31,7 @@ module.exports.register = (server, options, next) => {
     handler: (req, reply) => {
       User
         .findAll({ attributes: ['name'] })
-        .then((users) => reply(users).code(200))
+        .then(reply)
     },
 
     config: {
@@ -58,8 +59,8 @@ module.exports.register = (server, options, next) => {
       User
         .findById(req.params.id, { attributes: ['name'] })
         .then((user) => User.check404(user))
-        .then((user) => reply(user).code(200))
-        .catch((err) => reply(err).code(err.code))
+        .then(reply)
+        .catch(reply)
     },
 
     config: {
@@ -100,8 +101,8 @@ module.exports.register = (server, options, next) => {
         .findById(req.params.id)
         .then((user) => User.check404(user))
         .then((user) => user.destroy())
-        .then((user) => reply().code(200))
-        .catch((err) => reply(err).code(err.code))
+        .then(reply)
+        .catch(reply)
     },
 
     config: {
@@ -142,8 +143,14 @@ module.exports.register = (server, options, next) => {
           mail: req.payload.mail,
           pass: req.payload.pass
         })
-        .then((user) => reply({ id: user.id }).code(201))
-        .catch((err) => reply(err).code(500)) // TODO: check validation errors
+        .then((user) => reply({ id: user.id }).code(201)) // TODO: send token here?
+        .catch((err) =>
+          err.name !== 'SequelizeUniqueConstraintError'
+            ? Promise.reject(err) // Unknown error
+            : Boom.badData(err.errors.map((e) =>
+              `${e.path} "${e.value}" already exists`).join('\n'))
+        )
+        .then(reply)
     },
 
     config: {
@@ -161,10 +168,12 @@ module.exports.register = (server, options, next) => {
         'hapi-swagger': {
           responses: {
             201: {
-              description: 'User created'
+              description: 'User created',
+              schema: Joi.object({ id: J.ID })
             },
-            500: {
-              description: 'Error'
+            422: {
+              description: 'User name or mail already exists',
+              schema: Joi.object()
             }
           }
         }
@@ -182,8 +191,8 @@ module.exports.register = (server, options, next) => {
         .findById(req.params.id)
         .then((user) => User.check404(user))
         .then((user) => user.getMoney())
-        .then((money) => reply(money).code(200))
-        .catch((err) => reply(err).code(err.code))
+        .then(reply)
+        .catch(reply)
     },
 
     config: {
@@ -221,8 +230,8 @@ module.exports.register = (server, options, next) => {
         .findById(req.params.id)
         .then((user) => User.check404(user))
         .then((user) => user.getTransactions())
-        .then((transactions) => reply(transactions).code(200))
-        .catch((err) => reply(err).code(err.code))
+        .then(reply)
+        .catch(reply)
     },
 
     config: {
@@ -264,14 +273,11 @@ module.exports.register = (server, options, next) => {
           money + req.payload.amount >= 0
             ? user.createTransaction({ amount: req.payload.amount })
             .then((transaction) => [money, transaction])
-            : Promise.reject({
-              error: `Not enough money (available funds: ${money})`,
-              code: 402}))
-        .then(([money, transaction]) => reply({
-          transaction: transaction.id,
-          balance: transaction.amount + money
-        }).code(200))
-        .catch((err) => reply(err).code(err.code))
+            : Promise.reject(Boom.paymentRequired(`Not enough money (available funds: ${money})`))
+        )
+        .then(([money, t]) => ({ transaction: t.id, balance: t.amount + money }))
+        .then(reply)
+        .catch(reply)
     },
     config: {
       tags: ['api'],

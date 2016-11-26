@@ -20,6 +20,7 @@
   "homepage": "https://github.com/iSma/pokemon-betting-api-red#readme",
   "dependencies": {
     "bcryptjs": "^2.3.0",
+    "boom": "^4.2.0",
     "glue": "^4.0.0",
     "hapi": "^15.1.1",
     "hapi-cors-headers": "^1.0.0",

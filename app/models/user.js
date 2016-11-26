@@ -62,18 +62,14 @@ module.exports = (db, DataTypes) => db.define('User', {
         .then((battle) =>
           battle.active
             ? true
-            : Promise.reject({
-              error: `Battle ${battle.id} has already started`,
-              code: 418
-            }))
+            : Promise.reject(Boom.ressourceGone(`Battle ${battle.id} has already started`))
+        )
         .then(() => this.getMoney())
         .then((money) =>
           money >= amount
             ? true
-            : Promise.reject({
-              error: `Not enough money (available funds: ${money})`,
-              code: 402
-            })) // TODO: check if event is active
+            : Promise.reject(Boom.paymentRequired(`Not enough money (available funds: ${money})`))
+        )
         .then(() =>
           db.transaction((t) =>
             this
