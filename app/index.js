@@ -36,6 +36,7 @@ const manifest = {
 
 Glue.compose(manifest, { relativeTo: __dirname }, (err, server) => {
   if (err) throw err
+  server.ext('onPreResponse', require('hapi-cors-headers'))
   server.start((err) => {
     if (err) throw err
     console.log(`Server running at: ${server.info.uri}`)
