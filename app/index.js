@@ -25,10 +25,12 @@ const manifest = {
       }
     },
     { plugin: './models' },
+    { plugin: './auth' },
     { plugin: './sync' },
     { plugin: './controllers/users' },
     { plugin: './controllers/battles' },
     { plugin: './controllers/bets' },
+    { plugin: './controllers/login' },
     { plugin: './controllers/graph' }
     // ...
   ]

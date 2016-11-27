@@ -24,6 +24,11 @@ module.exports.register = (server, options, next) => {
   // - /users/{id}/balance (only visible to user)
   //  + GET
 
+  const checkPermissions = (req) =>
+    req.params.id === req.auth.credentials.sub
+    ? User.findById(req.params.id)
+    : Promise.reject(Boom.unauthorized())
+
   // GET /users
   server.route({
     method: 'GET',
@@ -95,19 +100,18 @@ module.exports.register = (server, options, next) => {
     method: 'DELETE',
     path: '/users/{id}',
     handler: (req, reply) => {
-      // TODO: check permissions
       // TODO: what to do with user's bets???
-      User
-        .findById(req.params.id)
+      checkPermissions(req)
         .then((user) => User.check404(user))
         .then((user) => user.destroy())
-        .then(reply)
+        .then(reply) // TODO: log out
         .catch(reply)
     },
 
     config: {
       tags: ['api'],
       description: 'Delete user account',
+      auth: 'jwt',
 
       validate: {
         params: {
@@ -143,13 +147,13 @@ module.exports.register = (server, options, next) => {
           mail: req.payload.mail,
           pass: req.payload.pass
         })
-        .then((user) => reply({ id: user.id }).code(201)) // TODO: send token here?
+        .then((user) => reply({ id: user.id }).code(201))
         .catch((err) =>
           err.name !== 'SequelizeUniqueConstraintError'
             ? Promise.reject(err) // Unknown error
             : Boom.badData(err.errors.map((e) =>
               `${e.path} "${e.value}" already exists`).join('\n'))
-        )
+            )
         .then(reply)
     },
 
@@ -186,18 +190,18 @@ module.exports.register = (server, options, next) => {
     method: 'GET',
     path: '/users/{id}/balance',
     handler: (req, reply) => {
-      // TODO: check permissions
-      User
-        .findById(req.params.id)
+      checkPermissions(req)
         .then((user) => User.check404(user))
         .then((user) => user.getMoney())
-        .then(reply)
+        .then(reply) // TODO: send new token
         .catch(reply)
     },
 
     config: {
       tags: ['api'],
       description: 'Get available funds',
+      auth: 'jwt',
+
       validate: {
         params: {
           id: J.ID.required()
@@ -225,18 +229,18 @@ module.exports.register = (server, options, next) => {
     method: 'GET',
     path: '/users/{id}/transactions',
     handler: (req, reply) => {
-      // TODO: check permissions
-      User
-        .findById(req.params.id)
+      checkPermissions(req)
         .then((user) => User.check404(user))
         .then((user) => user.getTransactions())
-        .then(reply)
+        .then(reply) // TODO: send new token
         .catch(reply)
     },
 
     config: {
       tags: ['api'],
       description: 'Get available funds',
+      auth: 'jwt',
+
       validate: {
         params: {
           id: J.ID.required()
@@ -264,9 +268,7 @@ module.exports.register = (server, options, next) => {
     method: 'POST',
     path: '/users/{id}/transactions',
     handler: (req, reply) => {
-      // TODO: check permissions
-      User
-        .findById(req.params.id)
+      checkPermissions(req)
         .then((user) => User.check404(user))
         .then((user) => user.getMoney().then((money) => [user, money]))
         .then(([user, money]) =>
@@ -276,7 +278,7 @@ module.exports.register = (server, options, next) => {
             : Promise.reject(Boom.paymentRequired(`Not enough money (available funds: ${money})`))
         )
         .then(([money, t]) => ({ transaction: t.id, balance: t.amount + money }))
-        .then(reply)
+        .then(reply) // TODO: send new token
         .catch(reply)
     },
     config: {
@@ -304,9 +306,9 @@ module.exports.register = (server, options, next) => {
               description: 'User not found'
             }
           }
-        }
-      }
-    }
+  }
+  }
+  }
   })
 
   return next()
