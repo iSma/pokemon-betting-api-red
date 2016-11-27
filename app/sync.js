@@ -29,10 +29,7 @@ module.exports.register = (server, options, next) => {
           ? battle.startTime - now + 10 * 1000 // TODO: save intervals as global constants
           : 30 * 1000
 
-        while (next < 0) {
-          next += 10 * 60 * 1000 // New battles appear every 10 minutes
-        }
-
+        while (next < 0) next += 10 * 60 * 1000 // New battles appear every 10 minutes
         console.log(`>>> syncNewBattles > next sync in ${next / 1000}s`)
         setTimeout(syncNewBattles, next)
       })
