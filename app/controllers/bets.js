@@ -148,6 +148,9 @@ module.exports.register = (server, options, next) => {
         payload: {
           amount: Joi.number().positive().required(),
           choice: Joi.number().min(1).max(2).required()
+        },
+        query: {
+          token: Joi.string()
         }
       },
 

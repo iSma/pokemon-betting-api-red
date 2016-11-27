@@ -117,7 +117,9 @@ module.exports.register = (server, options, next) => {
         params: {
           id: J.ID.required()
         },
-        query: {}
+        query: {
+          token: Joi.string()
+        }
       },
 
       plugins: {
@@ -205,6 +207,9 @@ module.exports.register = (server, options, next) => {
       validate: {
         params: {
           id: J.ID.required()
+        },
+        query: {
+          token: Joi.string()
         }
       },
 
@@ -244,6 +249,9 @@ module.exports.register = (server, options, next) => {
       validate: {
         params: {
           id: J.ID.required()
+        },
+        query: {
+          token: Joi.string()
         }
       },
 
@@ -287,8 +295,12 @@ module.exports.register = (server, options, next) => {
       validate: {
         payload: {
           amount: Joi.number().required()
+        },
+        query: {
+          token: Joi.string()
         }
       },
+
       plugins: {
         'hapi-swagger': {
           'responses': {
@@ -306,9 +318,9 @@ module.exports.register = (server, options, next) => {
               description: 'User not found'
             }
           }
-  }
-  }
-  }
+        }
+      }
+    }
   })
 
   return next()
