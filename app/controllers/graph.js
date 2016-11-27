@@ -19,8 +19,9 @@ module.exports.register = (server, options, next) => {
     let node, label, shape, color
     if (event.Model === Battle) {
       node = `battles/${event.id}`
-      label = `${event.id}\n`
-        + `result:${event.result}`
+      label =
+        `${event.id}\n` +
+        `result:${event.result}`
       shape = 'invhouse'
       color = event.result === null
         ? 'white'
@@ -28,10 +29,10 @@ module.exports.register = (server, options, next) => {
     } else {
       node = `bets/${event.id}`
       label =
-        `${event.id}\n`
-        + `users/${event.UserId}\n`
-        + `choice:${event.choice}\n`
-        + `result:${event.result}`
+        `${event.id}\n` +
+        `users/${event.UserId}\n` +
+        `choice:${event.choice}\n` +
+        `result:${event.result}`
       shape = 'note'
       color = event.won === null
         ? 'white'

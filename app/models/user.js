@@ -1,5 +1,6 @@
 'use strict'
 const bcrypt = require('bcryptjs')
+const Boom = require('boom')
 
 const hash = (user) =>
   (!user.changed('pass'))

@@ -153,23 +153,22 @@ module.exports.register = (server, options, next) => {
       },
 
       plugins: {
-        'hapi-swagger':
-          {
-            responses: {
-              201: {
-                description: 'New bet created'
-              },
-              402: {
-                description: 'Insufficient funds'
-              },
-              404: {
-                description: 'Battle not found'
-              },
-              410: {
-                description: 'Battle has already started'
-              }
+        'hapi-swagger': {
+          responses: {
+            201: {
+              description: 'New bet created'
+            },
+            402: {
+              description: 'Insufficient funds'
+            },
+            404: {
+              description: 'Battle not found'
+            },
+            410: {
+              description: 'Battle has already started'
             }
           }
+        }
       }
     }
   })
