@@ -57,6 +57,7 @@ module.exports = (db, DataTypes) => db.define('User', {
     },
 
     placeBet: function (event, amount, choice) {
+      amount = Math.abs(amount)
       const onBet = event.Model === this.Model.associations.Bets.target
 
       return Promise.resolve(onBet ? event.getBattle() : event)
@@ -74,7 +75,7 @@ module.exports = (db, DataTypes) => db.define('User', {
         .then(() =>
           db.transaction((t) =>
             this
-              .createTransaction({ amount: amount }, { transaction: t })
+              .createTransaction({ amount: -amount }, { transaction: t })
               .then((transaction) =>
                 this.createBet({
                   choice: choice,

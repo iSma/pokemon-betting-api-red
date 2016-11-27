@@ -97,6 +97,12 @@ module.exports = (db, DataTypes) => db.define('Bet', {
             [0, 0]))
     },
 
+    getAmount: function () {
+      return this
+        .getTransaction()
+        .then((t) => -t.amount)
+    },
+
     updateResult: function (result, t) {
       // TODO: Distribute money
       const r = 1 + (this.choice !== result)

@@ -2,7 +2,7 @@
 const Joi = require('joi')
 
 module.exports.register = (server, options, next) => {
-  const { Bet, User } = server.app.db
+  const { Bet, User } = server.app.db.models
   const J = server.app.joi
 
   // Routes covered in this module:

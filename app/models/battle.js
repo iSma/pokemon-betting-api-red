@@ -96,6 +96,22 @@ module.exports = (db, DataTypes) => db.define('Battle', {
   },
 
   instanceMethods: {
+    getOdds: function () {
+      const Transaction = this.Model
+        .associations.Bets.target
+        .associations.Transaction.target
+
+      return this
+        .getBets({ include: Transaction })
+        .then((bets) => bets.filter((b) => b.ParentId === null))
+        .then((bets) =>
+          bets.reduce(([win, lose], bet) =>
+            (bet.choice === 1)
+              ? [win - bet.Transaction.amount, lose]
+              : [win, lose - bet.Transaction.amount],
+            [0, 0]))
+    },
+
     // Sync this battle with remote API
     syncRemote: function () {
       return db.client
