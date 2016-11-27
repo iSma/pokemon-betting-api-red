@@ -1,5 +1,4 @@
 'use strict'
-const _ = require('lodash')
 
 module.exports.register = (server, options, next) => {
   const client = server.app.db.client
@@ -20,12 +19,21 @@ module.exports.register = (server, options, next) => {
 
   function syncNewBattles () {
     const now = new Date()
-    console.log(`syncNewBattles() ${now})`)
+    console.log(`>>> syncNewBattles() ${now})`)
     getNewBattles()
-      .then((battles) => {
-        const next = battles.length === 0
-          ? 30 * 1000
-          : Math.max(0, _.last(battles).startTime - now) + (10 * 60 + 30) * 1000
+      .then((battles) => console.log(`>>> syncNewBattles > ${battles.length} new battles`))
+      .then(() => Battle.findOne({ where: { endTime: null }, order: ['startTime'] }))
+      .then((battle) => {
+        const now = new Date()
+        let next = battle
+          ? battle.startTime - now + 10 * 1000 // TODO: save intervals as global constants
+          : 30 * 1000
+
+        while (next < 0) {
+          next += 10 * 60 * 1000 // New battles appear every 10 minutes
+        }
+
+        console.log(`>>> syncNewBattles > next sync in ${next / 1000}s`)
         setTimeout(syncNewBattles, next)
       })
   }
@@ -34,7 +42,8 @@ module.exports.register = (server, options, next) => {
   function getNewBattles () {
     console.log(`getNewBattles()`)
     return Battle.max('id')
-      .then((lastId) => lastId ? findOffset(lastId) : 0)
+      .then((lastId) => Battle.count().then((count) => [lastId, count]))
+      .then(([lastId, count]) => lastId ? findOffset(lastId, count) : 0)
       .then(getBattles)
       .then((battles) => battles.map((b) => Battle.fromApi(b)))
       .then((battles) => battles.map((b) => Battle.create(b)))

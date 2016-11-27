@@ -123,14 +123,16 @@ module.exports = (db, DataTypes) => db.define('Battle', {
     scheduleSync: function () {
       const now = new Date()
       if (this.result) {
+        console.log(`[${this.id}].scheduleSync() > DONE`)
         return
-      } else if (!this.endTime) {
-        const next = Math.max(0, this.startTime - now) + 10 * 1000
-        setTimeout(() => this.syncRemote().then(() => this.scheduleSync()), next)
-      } else {
-        const next = Math.max(0, this.endTime - now) + 10 * 1000
-        setTimeout(() => this.syncRemote().then(() => this.scheduleSync()), next)
       }
+
+      const next = this.endTime
+      ? Math.max(0, this.endTime - now) + 10 * 1000 // TODO: save intervals as global constants
+      : Math.max(0, this.startTime - now) + 10 * 1000
+
+      console.log(`[${this.id}].scheduleSync() > in ${next / 1000}s`)
+      setTimeout(() => this.syncRemote().then(() => this.scheduleSync()), next)
     }
   }
 })
