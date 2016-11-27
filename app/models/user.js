@@ -53,7 +53,7 @@ module.exports = (db, DataTypes) => db.define('User', {
     getMoney: function () {
       return this.Model.associations.Transactions.target
         .sum('amount', { where: { UserId: this.id } })
-        .then((money) => Number.isNan(money) ? 0 : money)
+        .then((money) => Number.isNaN(money) ? 0 : money)
     },
 
     placeBet: function (event, amount, choice) {
