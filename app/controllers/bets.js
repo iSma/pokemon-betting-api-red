@@ -133,7 +133,7 @@ module.exports.register = (server, options, next) => {
     path: '/bets/{id}/bets',
     handler: (req, reply) => {
       Promise.all([
-        User.findById(token.id).then((user) => User.check404(user)),
+        User.findById(req.auth.credentials.id).then((user) => User.check404(user)),
         Bet.findById(req.params.id).then((bet) => Bet.check404(bet))
       ])
         .then(([user, bet]) => user.placeBet(bet, req.payload.amount, req.payload.choice))
