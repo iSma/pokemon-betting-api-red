@@ -19,6 +19,7 @@ module.exports.register = (server, options, next) => {
   // - /battles/{id}/odds
   //  + GET: odds on battle
 
+  // GET /battles
   server.route({
     method: 'GET',
     path: '/battles',
@@ -54,6 +55,7 @@ module.exports.register = (server, options, next) => {
     }
   })
 
+  // GET /battles/{id}
   server.route({
     method: 'GET',
     path: '/battles/{id}',
@@ -91,6 +93,7 @@ module.exports.register = (server, options, next) => {
     }
   })
 
+  // GET /battles/{id}/bets
   server.route({
     method: 'GET',
     path: '/battles/{id}/bets',
@@ -129,6 +132,7 @@ module.exports.register = (server, options, next) => {
     }
   })
 
+  // POST /battles/{id}/bets
   server.route({
     method: 'POST',
     path: '/battles/{id}/bets',
@@ -148,6 +152,9 @@ module.exports.register = (server, options, next) => {
       auth: 'jwt',
 
       validate: {
+        params: {
+          id: J.ID.required()
+        },
         payload: {
           amount: Joi.number().positive().required(),
           choice: Joi.number().min(1).max(2).required()
@@ -178,6 +185,7 @@ module.exports.register = (server, options, next) => {
     }
   })
 
+  // GET /battles/{id}/odds
   server.route({
     method: 'GET',
     path: '/battles/{id}/odds',

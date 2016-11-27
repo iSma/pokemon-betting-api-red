@@ -18,6 +18,7 @@ module.exports.register = (server, options, next) => {
   // - /bets/{id}/odds
   //  + GET: odds on bet
 
+  // GET /bets
   server.route({
     method: 'GET',
     path: '/bets',
@@ -53,6 +54,7 @@ module.exports.register = (server, options, next) => {
     }
   })
 
+  // GET /bets/{id}
   server.route({
     method: 'GET',
     path: '/bets/{id}',
@@ -90,6 +92,7 @@ module.exports.register = (server, options, next) => {
     }
   })
 
+  // GET /bets/{id}/bets
   server.route({
     method: 'GET',
     path: '/bets/{id}/bets',
@@ -128,6 +131,7 @@ module.exports.register = (server, options, next) => {
     }
   })
 
+  // POST /bets/{id}/bets
   server.route({
     method: 'POST',
     path: '/bets/{id}/bets',
@@ -145,6 +149,9 @@ module.exports.register = (server, options, next) => {
       tags: ['api'],
       description: 'Place a bet on this bet',
       validate: {
+        params: {
+          id: J.ID.required()
+        },
         payload: {
           amount: Joi.number().positive().required(),
           choice: Joi.number().min(1).max(2).required()
@@ -175,6 +182,7 @@ module.exports.register = (server, options, next) => {
     }
   })
 
+  // GET /bets/{id}/odds
   server.route({
     method: 'GET',
     path: '/bets/{id}/odds',
