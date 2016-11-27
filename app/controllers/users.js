@@ -291,10 +291,13 @@ module.exports.register = (server, options, next) => {
     },
     config: {
       tags: ['api'],
-      description: 'make a new transaction',
+      description: 'Deposit or withdraw money from user account',
       validate: {
         payload: {
           amount: Joi.number().required()
+        },
+        params: {
+          id: J.ID.required()
         },
         query: {
           token: Joi.string()
