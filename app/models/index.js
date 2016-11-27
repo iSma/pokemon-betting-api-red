@@ -1,6 +1,10 @@
-'use strict';
+'use strict'
 
-const Sequelize = require('sequelize');
+const Sequelize = require('sequelize')
+const Joi = require('joi')
+const JoiSequelize = require('joi-sequelize')
+const request = require('request-json')
+const Boom = require('boom')
 
 module.exports.register = (server, options, next) => {
   const db = new Sequelize(
@@ -9,49 +13,48 @@ module.exports.register = (server, options, next) => {
     process.env.POSTGRES_PASSWORD, {
       host: process.env.POSTGRES_HOST,
       dialect: 'postgres',
-      port:5432
-    });
+      port: 5432,
+      define: {
+        timestamps: false,
+        classMethods: {
+          // Checks if an object is not null, throws a 404 error otherwise.
+          // Intended to be used in a promise chain, right after .findById(id)
+          check404: function (object) {
+            return (object)
+              ? Promise.resolve(object)
+              : Promise.reject(Boom.notFound(`${this.name} not found`))
+          }
+        }
+      }
+    })
 
-  const User = db.import('./user.js');
-  const Event = db.import('./event.js');
-  const Transaction = db.import('./transaction.js');
+  db.client = request.createClient('http://pokemon-battle.bid/api/v1/')
 
-  User.hasMany(Event);
-  Event.hasOne(Event);
+  server.app.db = db
+  server.app.joi = {
+    ID: Joi.number().integer().positive()
+  };
 
-  Transaction.belongsTo(Event);
-  User.hasMany(Transaction);
+  ['battle', 'bet', 'trainer', 'user', 'transaction']
+    .map((name) => `./${name}.js`)
+    .forEach((file) => {
+      const model = db.import(file)
+      const joi = new JoiSequelize(require(file))
+      server.app.joi[model.name] = joi
+    })
 
-  Transaction.getMoney = function(userId) {
-    const p =
-      this
-      .sum('amount', { where:{ UserId: userId }})
-      .then((amount) => {
-        if (!isNaN(amount))
-          return amount;
-
-        return User.findOne({ where:{ id: userId } })
-          .then((user)=> {
-            if (user !== null) return 0;
-            else return null;
-          })
-      });
-
-    return Promise.resolve(p);
+  for (const model in db.models) {
+    db.models[model].associate(db.models)
   }
 
-  server.app.DB = {
-    db: db,
-    User: User,
-    Event: Event,
-    Transaction: Transaction,
-  }
-
-  db.sync(/*{ force: true }*/).then(() => next());
+  db.sync({ force: false }).then(() => {
+    console.log('Database synced')
+    return next()
+  })
 }
 
 module.exports.register.attributes = {
   name: 'models',
   version: '1.0.0'
-};
+}
 

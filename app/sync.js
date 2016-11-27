@@ -1,70 +1,89 @@
-'use strict';
-
-const request = require('request-json');
+'use strict'
 
 module.exports.register = (server, options, next) => {
-  // TODO: Extract API URL to global variable
-  const client = request.createClient('http://pokemon-battle.bid/api/v1/');
-  const Event = server.app.DB.Event;
+  const client = server.app.db.client
+  const { Battle } = server.app.db.models
 
-  function sync(event) {
-    // TODO: refactor as Promise
-    if (event !== undefined) {
-      // We are being called recursively
-      // TODO: Pay user's winnings
-      const result = event.choice == event.result;
-
-      // Recursively update child bets
-      Event.update(
-        { result: result },
-        { where: { battle: id } })
-        .then((events) => { events.forEach(syncRecursive) });
-    } else {
-      // We are in the root call
-      Event.findAll({
-        // Get all 1st order bets (betting on a battle) that haven't been
-        // resolved.
-        where: {
-          battle: { $ne: null },
-          result: null
-        }
-      }).then((events) => {
-        // Get list of unique battle IDs to sync.
-        const battleIds = new Set(events.map((e) => e.battle));
-        for (let id of battleIds) {
-          client.get(`battles/${id}`).then((res) => {
-            const battle = res.body;
-            if (battle.end_time === null) return; // Battle isn't finished yet
-
-            const result = battle.winner.trainer_id == battle.team1.trainer.id;
-            // Save the result to all bets referring to this battle and
-            // recursively update the child bets.
-            Event.update(
-              { result: result },
-              { where: { battle: id } })
-              .then((events) => { events.forEach(sync) });
-          }).catch((err) => {
-            // TODO: Handle error.
-            // Battle might have been deleted from remote API
-            // Ideall, the API would answer 404 status and a JSON document,
-            // however, it answers with an HTML document, leading to a JSON
-            // parsing error. This is why we are here.
-            // TODO: Delete all bets referencing to this battle
-          });
-        }
-      });
-    }
+  function sync () {
+    syncExistingBattles()
+    syncNewBattles()
   }
 
-  sync();
-  setInterval(sync, 1000*30); // Sync every half minute
-  // TODO: Extract sync period to global variable
-  return next();
+  function syncExistingBattles () {
+    Battle
+      .findAll({ where: { result: null } })
+      .then((battles) => battles.map((b) => b.syncRemote()))
+      .then((battles) => Promise.all(battles))
+      .then((battles) => battles.forEach((b) => b.scheduleSync()))
+  }
+
+  function syncNewBattles () {
+    const now = new Date()
+    console.log(`>>> syncNewBattles() ${now})`)
+    getNewBattles()
+      .then((battles) => console.log(`>>> syncNewBattles > ${battles.length} new battles`))
+      .then(() => Battle.findOne({ where: { endTime: null }, order: ['startTime'] }))
+      .then((battle) => {
+        const now = new Date()
+        let next = battle
+          ? battle.startTime - now + 10 * 1000 // TODO: save intervals as global constants
+          : 30 * 1000
+
+        while (next < 0) next += 10 * 60 * 1000 // New battles appear every 10 minutes
+        console.log(`>>> syncNewBattles > next sync in ${next / 1000}s`)
+        setTimeout(syncNewBattles, next)
+      })
+  }
+
+  // Fetch all new battles that aren't in our DB
+  function getNewBattles () {
+    console.log(`getNewBattles()`)
+    return Battle.max('id')
+      .then((lastId) => Battle.count().then((count) => [lastId, count]))
+      .then(([lastId, count]) => lastId ? findOffset(lastId, count) : 0)
+      .then(getBattles)
+      .then((battles) => battles.map((b) => Battle.fromApi(b)))
+      .then((battles) => battles.map((b) => Battle.create(b)))
+      .then((battles) => Promise.all(battles))
+      .then((battles) => {
+        battles.forEach((b) => b.scheduleSync())
+        return battles
+      })
+  }
+
+  // Find the offset of lastId
+  function findOffset (lastId, offset) {
+    console.log(`findOffset(${lastId}, ${offset})`)
+    offset = offset || lastId
+    return offset === 0
+      ? 0
+      : client
+      .get(`battles?limit=100&offset=${offset}`)
+      .then((res) => res.res.statusCode === 200 ? res.body : Promise.reject()) // TODO
+      .then((battles) => battles.map((b) => b.id).indexOf(lastId))
+      .then((i) => i > 0 ? offset + i + 1 : findOffset(lastId, offset - 100))
+  }
+
+  // Get all remote battles starting at offset
+  function getBattles (offset) {
+    console.log(`getBattles(${offset})`)
+    return client
+      .get(`battles?limit=100&offset=${offset}`)
+      .then((res) => res.res.statusCode === 200 ? res.body : Promise.reject()) // TODO
+      .then((battles) =>
+        battles.length < 100
+          ? battles
+          : getBattles(offset + 100).then((b) => battles.concat(b))
+      )
+  }
+
+  sync()
+  return next()
 }
 
 module.exports.register.attributes = {
   name: 'sync',
   version: '1.0.0',
   dependencies: 'models'
-};
+}
 

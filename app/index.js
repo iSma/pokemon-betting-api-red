@@ -1,4 +1,4 @@
-const Glue = require('glue');
+const Glue = require('glue')
 
 const manifest = {
   connections: [{
@@ -15,7 +15,7 @@ const manifest = {
           info: {
             'title': 'Pokémon Betting API',
             'version': '1.0',
-            'description': 'An API for betting on Pokémon battles',
+            'description': 'An API for betting on Pokémon battles'
           },
           documentationPath: '/doc',
           tags: [
@@ -25,19 +25,22 @@ const manifest = {
       }
     },
     { plugin: './models' },
+    { plugin: './auth' },
     { plugin: './sync' },
     { plugin: './controllers/users' },
-    { plugin: './controllers/events' },
-    { plugin: './controllers/graph' },
-    { plugin: './controllers/transactions' },
+    { plugin: './controllers/battles' },
+    { plugin: './controllers/bets' },
+    { plugin: './controllers/login' },
+    { plugin: './controllers/graph' }
     // ...
   ]
-};
+}
 
 Glue.compose(manifest, { relativeTo: __dirname }, (err, server) => {
-  if (err) throw err;
+  if (err) throw err
+  server.ext('onPreResponse', require('hapi-cors-headers'))
   server.start((err) => {
-    if (err) throw err;
-    console.log(`Server running at: ${server.info.uri}`);
-  });
-});
+    if (err) throw err
+    console.log(`Server running at: ${server.info.uri}`)
+  })
+})
