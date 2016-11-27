@@ -292,6 +292,8 @@ module.exports.register = (server, options, next) => {
     config: {
       tags: ['api'],
       description: 'Deposit or withdraw money from user account',
+      auth: 'jwt',
+
       validate: {
         payload: {
           amount: Joi.number().required()
