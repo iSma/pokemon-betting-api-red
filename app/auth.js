@@ -42,7 +42,10 @@ module.exports.register = (server, options, next) => {
   function login (name, pass) {
     return User
       .findOne({ where: { name: name } })
-      .then((user) => user ? user.verify(pass).then(() => user) : null)
+      .then((user) =>
+        !user
+          ? null
+          : user.verify(pass).then((ok) => ok ? user : null))
       .then(token)
   }
 

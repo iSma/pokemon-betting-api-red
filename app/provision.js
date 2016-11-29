@@ -57,7 +57,7 @@ function Provisioner () {
 
         const n = numUsers - users.length
         let last = users.map((u) => u.mail.split('@')[0].split('-')[1])
-        last = Math.max(...last) + 1
+        last = users.length === 0 ? 0 : Math.max(...last) + 1
 
         users = _.range(last, last + n)
           .map((i) => User.create({

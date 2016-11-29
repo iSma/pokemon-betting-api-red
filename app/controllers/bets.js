@@ -137,7 +137,7 @@ module.exports.register = (server, options, next) => {
     path: '/bets/{id}/bets',
     handler: (req, reply) => {
       Promise.all([
-        User.findById(req.auth.credentials.id).then((user) => User.check404(user)),
+        User.findById(req.auth.credentials.sub).then((user) => User.check404(user)),
         Bet.findById(req.params.id).then((bet) => Bet.check404(bet))
       ])
         .then(([user, bet]) => user.placeBet(bet, req.payload.amount, req.payload.choice))
@@ -148,6 +148,8 @@ module.exports.register = (server, options, next) => {
     config: {
       tags: ['api'],
       description: 'Place a bet on this bet',
+      auth: 'jwt',
+
       validate: {
         params: {
           id: J.ID.required()
