@@ -35,12 +35,13 @@ module.exports.register = (server, options, next) => {
     ID: Joi.number().integer().positive()
   };
 
-  ['battle', 'team', 'trainer', 'bet', 'user', 'transaction']
-    .map((name) => `./${name}.js`)
+  require('fs')
+    .readdirSync('./models')
+    .filter((file) => file !== 'index.js')
     .forEach((file) => {
       const model = db.import(file)
-      const joi = new JoiSequelize(require(file))
-      server.app.joi[model.name] = joi
+      const joi = new JoiSequelize(require(`./${file}`))
+      server.app.joi[model.name] = joi // TODO: move Joi schema to class method
     })
 
   for (const model in db.models) {
