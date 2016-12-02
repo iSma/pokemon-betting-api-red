@@ -31,6 +31,19 @@ module.exports = (db, DataTypes) => db.define('Trainer', {
   classMethods: {
     associate: function (models) {
       this.hasMany(models.Team, { foreignKey: { allowNull: false } })
+    },
+
+    createFromApi: function (api) {
+      return this
+        .findOrCreate({
+          where: { id: api.id },
+          defaults: {
+            name: api.name,
+            gender: api.gender,
+            country: api.country_code
+          }
+        })
+        .then(([trainer, created]) => trainer)
     }
   }
 })

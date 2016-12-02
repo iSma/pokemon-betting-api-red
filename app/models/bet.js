@@ -99,16 +99,15 @@ module.exports = (db, DataTypes) => db.define('Bet', {
         .then((t) => -t.amount)
     },
 
-    updateResult: function (result, t) {
+    syncResult: function (result, { transaction: t }) {
       // TODO: Distribute money
       const r = 1 + (this.choice !== result)
       return this
         .update({ result: result }, { transaction: t })
-        .then(() => this.getBet())
-        .then((bets) => bets.map((b) => b.updateResult(r, t)))
+        .then(() => this.getBets({ transaction: t }))
+        .then((bets) => bets.map((b) => b.updateResult(r, { transaction: t })))
         .then(_.flatMap)
         .then((updates) => Promise.all(updates))
-        .then(() => true)
     }
   }
 })

@@ -1,4 +1,5 @@
 'use strict'
+const _ = require('lodash')
 
 module.exports = (db, DataTypes) => db.define('Battle', {
   id: {
@@ -32,17 +33,31 @@ module.exports = (db, DataTypes) => db.define('Battle', {
       this.hasMany(models.Team, { foreignKey: { allowNull: false } })
     },
 
-    fromApi: function (battle) {
-      return {
-        id: battle.id,
-        startTime: new Date(battle.start_time),
-        endTime: battle.end_time ? new Date(battle.end_time) : null,
-        result:
-          battle.winner
-          ? 1 + (battle.winner.trainer_id !== battle.team1.trainer.id)
-          : null
-        // TODO: add trainers
-      }
+    resultFromApi: (api) => !api.winner ? null
+      : api.winner.trainer_id === api.team1.trainer.id ? 1 : 2,
+
+    createFromApi: function (api) {
+      return this
+        .findOrCreate({
+          where: { id: api.id },
+          defaults: {
+            startTime: new Date(api.start_time),
+            endTime: !api.end_time ? null : new Date(api.end_time),
+            result: this.resultFromApi(api)
+          }
+        })
+        .then(([battle, created]) =>
+          !created ? battle
+            : Promise.resolve([api.team1, api.team2])
+            .then((teams) =>
+              teams.map((t, i) =>
+                db.models.Trainer
+                  .createFromApi(t.trainer)
+                  .then((trainer) => battle.createTeam({ index: i + 1, TrainerId: trainer.id }))
+                  .then((team) => team)// TODO: add pokemons
+              ))
+            .then((teams) => Promise.all(teams))
+            .then((teams) => battle))
     }
   },
 
@@ -80,28 +95,28 @@ module.exports = (db, DataTypes) => db.define('Battle', {
             [0, 0]))
     },
 
-    // Sync this battle with remote API
-    syncRemote: function () {
+    // Sync this battle's result with remote API. We assume that except for the
+    // result, a battle is immutable.
+    syncResult: function () {
+      // Result is already set; can't change this battle anymore
+      if (this.result) return Promise.resolve([])
+
       return db.client
         .get(`battles/${this.id}`)
         .then((res) =>
           res.res.statusCode === 200
             ? res.body
             : Promise.reject(res.res)) // TODO
-        .then((battle) => this.Model.fromApi(battle))
-        .then((battle) => this.set(battle))
-        .then(() =>
-          this.changed('result')
-            ? db.transaction((t) => {
-              return this
-                .save({ transaction: t })
+        .then(this.Model.resultFromApi)
+        .then((result) =>
+          !result ? []
+            : db.transaction((t) => this
+              .update({ result: result }, { transaction: t })
                 .then(() => this.getBets({ transaction: t }))
-                .then((bets) => bets.map((b) => b.updateResult(this.result, t)))
+                .then((bets) => bets.map((b) => b.syncResult(this.result, t)))
                 .then((updates) => Promise.all(updates))
-            })
-            : this.save()
-        )
-        .then(() => this)
+                .then(_.flatMap)
+            ))
     },
 
     scheduleSync: function () {
@@ -116,7 +131,7 @@ module.exports = (db, DataTypes) => db.define('Battle', {
         : Math.max(0, this.startTime - now) + 10 * 1000
 
       console.log(`[${this.id}].scheduleSync() > in ${next / 1000}s`)
-      setTimeout(() => this.syncRemote().then(() => this.scheduleSync()), next)
+      setTimeout(() => this.syncResult().then(() => this.scheduleSync()), next)
     }
   }
 })

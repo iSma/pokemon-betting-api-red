@@ -12,8 +12,6 @@ module.exports.register = (server, options, next) => {
   function syncExistingBattles () {
     Battle
       .findAll({ where: { result: null } })
-      .then((battles) => battles.map((b) => b.syncRemote()))
-      .then((battles) => Promise.all(battles))
       .then((battles) => battles.forEach((b) => b.scheduleSync()))
   }
 
@@ -40,10 +38,9 @@ module.exports.register = (server, options, next) => {
     console.log(`getNewBattles()`)
     return Battle.max('id')
       .then((lastId) => Battle.count().then((count) => [lastId, count]))
-      .then(([lastId, count]) => lastId ? findOffset(lastId, count) : 0)
+      .then(([lastId, count]) => lastId ? findOffset(lastId, count) : 10400)
       .then(getBattles)
-      .then((battles) => battles.map((b) => Battle.fromApi(b)))
-      .then((battles) => battles.map((b) => Battle.create(b)))
+      .then((battles) => battles.map((b) => Battle.createFromApi(b)))
       .then((battles) => Promise.all(battles))
       .then((battles) => {
         battles.forEach((b) => b.scheduleSync())
@@ -55,8 +52,7 @@ module.exports.register = (server, options, next) => {
   function findOffset (lastId, offset) {
     console.log(`findOffset(${lastId}, ${offset})`)
     offset = offset || lastId
-    return offset === 0
-      ? 0
+    return offset <= 0 ? 0
       : client
       .get(`battles?limit=100&offset=${offset}`)
       .then((res) => res.res.statusCode === 200 ? res.body : Promise.reject()) // TODO
