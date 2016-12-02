@@ -29,6 +29,7 @@ module.exports = (db, DataTypes) => db.define('Battle', {
   classMethods: {
     associate: function (models) {
       this.hasMany(models.Bet, { foreignKey: { allowNull: false } })
+      this.hasMany(models.Team, { foreignKey: { allowNull: false } })
     },
 
     fromApi: function (battle) {

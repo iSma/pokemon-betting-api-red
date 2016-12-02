@@ -24,14 +24,13 @@ module.exports = (db, DataTypes) => db.define('Trainer', {
     len: 2,
     allowNull: false,
     set: function (val) {
-      this.setDataValue('country', val.toLowerCase())
+      this.setDataValue('country', val.substring(0, 2).toLowerCase())
     }
   }
 }, {
   classMethods: {
     associate: function (models) {
-      this.hasMany(models.Battle, {as: 'Team1'})
-      this.hasMany(models.Battle, {as: 'Team2'})
+      this.hasMany(models.Team, { foreignKey: { allowNull: false } })
     }
   }
 })

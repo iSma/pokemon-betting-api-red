@@ -35,7 +35,7 @@ module.exports.register = (server, options, next) => {
     ID: Joi.number().integer().positive()
   };
 
-  ['battle', 'bet', 'trainer', 'user', 'transaction']
+  ['battle', 'team', 'trainer', 'bet', 'user', 'transaction']
     .map((name) => `./${name}.js`)
     .forEach((file) => {
       const model = db.import(file)
