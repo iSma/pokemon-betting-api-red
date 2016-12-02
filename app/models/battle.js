@@ -24,61 +24,11 @@ module.exports = (db, DataTypes) => db.define('Battle', {
       max: 2
     },
     allowNull: true
-  },
-
-  active: {
-    type: DataTypes.VIRTUAL(DataTypes.BOOLEAN, ['startTime']),
-    get: function () {
-      const now = new Date()
-      return this.startTime > now
-    }
-  },
-
-  started: {
-    type: DataTypes.VIRTUAL(DataTypes.BOOLEAN, ['startTime']),
-    get: function () {
-      const now = new Date()
-      return this.startTime <= now && this.endTime > now
-    }
-  },
-
-  finished: {
-    type: DataTypes.VIRTUAL(DataTypes.BOOLEAN, ['endTime']),
-    get: function () {
-      const now = new Date()
-      return this.endTime <= now
-    }
   }
-
 }, {
   classMethods: {
     associate: function (models) {
       this.hasMany(models.Bet, { foreignKey: { allowNull: false } })
-
-      this.addScope('active', function () {
-        return {
-          where: {
-            startTime: { $gt: new Date() }
-          }
-        }
-      })
-
-      this.addScope('started', function () {
-        return {
-          where: {
-            startTime: { $lte: new Date() },
-            endTime: { $gt: new Date() }
-          }
-        }
-      })
-
-      this.addScope('finished', function () {
-        return {
-          where: {
-            endTime: { $lte: new Date() }
-          }
-        }
-      })
     },
 
     fromApi: function (battle) {
@@ -95,14 +45,31 @@ module.exports = (db, DataTypes) => db.define('Battle', {
     }
   },
 
+  scopes: {
+    active: () => ({
+      where: {
+        startTime: { $gt: new Date() }
+      }
+    }),
+
+    started: () => ({
+      where: {
+        startTime: { $lte: new Date() },
+        endTime: { $gt: new Date() }
+      }
+    }),
+
+    ended: () => ({
+      where: {
+        endTime: { $lte: new Date() }
+      }
+    })
+  },
+
   instanceMethods: {
     getOdds: function () {
-      const Transaction = this.Model
-        .associations.Bets.target
-        .associations.Transaction.target
-
       return this
-        .getBets({ include: Transaction })
+        .getBets({ include: db.models.Bet.associations.Transaction })
         .then((bets) => bets.filter((b) => b.ParentId === null))
         .then((bets) =>
           bets.reduce(([win, lose], bet) =>
@@ -144,8 +111,8 @@ module.exports = (db, DataTypes) => db.define('Battle', {
       }
 
       const next = this.endTime
-      ? Math.max(0, this.endTime - now) + 10 * 1000 // TODO: save intervals as global constants
-      : Math.max(0, this.startTime - now) + 10 * 1000
+        ? Math.max(0, this.endTime - now) + 10 * 1000 // TODO: save intervals as global constants
+        : Math.max(0, this.startTime - now) + 10 * 1000
 
       console.log(`[${this.id}].scheduleSync() > in ${next / 1000}s`)
       setTimeout(() => this.syncRemote().then(() => this.scheduleSync()), next)

@@ -40,55 +40,51 @@ module.exports = (db, DataTypes) => db.define('Bet', {
 }, {
   classMethods: {
     associate: function (models) {
-      this.belongsTo(this, { as: 'Parent', foreignKey: 'ParentId' })
-      this.hasMany(this, { as: 'Bet', foreignKey: 'ParentId' })
+      this.belongsTo(this, { as: 'Parent' })
+      this.hasMany(this, { foreignKey: 'ParentId' })
 
       this.belongsTo(models.Battle, { foreignKey: { allowNull: false } })
       this.belongsTo(models.User, { foreignKey: { allowNull: false } })
 
       this.belongsTo(models.Transaction, { foreignKey: { allowNull: false } })
       this.belongsTo(models.Transaction, { as: 'WinTransaction' })
-
-      this.addScope('active', function () {
-        return {
-          include: [{
-            model: models.Battle,
-            where: {
-              startTime: { $gt: new Date() }
-            }
-          }]
-        }
-      })
-
-      this.addScope('started', function () {
-        return {
-          include: [{
-            model: models.Battle,
-            where: {
-              startTime: { $lte: new Date() },
-              endTime: { $gt: new Date() }
-            }
-          }]
-        }
-      })
-
-      this.addScope('finished', function () {
-        return {
-          include: [{
-            model: models.Battle,
-            where: {
-              endTime: { $lte: new Date() }
-            }
-          }]
-        }
-      })
     }
+  },
+
+  scopes: {
+    active: () => ({
+      include: [{
+        model: db.models.Battle,
+        where: {
+          startTime: { $gt: new Date() }
+        }
+      }]
+    }),
+
+    started: () => ({
+      include: [{
+        model: db.models.Battle,
+        where: {
+          startTime: { $lte: new Date() },
+          endTime: { $gt: new Date() }
+        }
+      }]
+    }),
+
+    ended: () => ({
+      include: [{
+        model: db.models.Battle,
+        where: {
+          endTime: { $lte: new Date() }
+        }
+      }]
+    })
   },
 
   instanceMethods: {
     getOdds: function () {
       return this
-        .getBet({ include: this.Model.associations.Transaction })
+        .getBets({ include: this.Model.associations.Transaction })
         .then((bets) =>
           bets.reduce(([win, lose], bet) =>
             (bet.choice === 1)
