@@ -10,8 +10,8 @@ module.exports.register = (server, options, next) => {
     },
     api: {
       battle: 'http://pokemon-battle.bid/api/v1',
-      pokemons: `${pokeapi}/csv/pokemon.csv`,
-      stats: `${pokeapi}/pokemon_stats.csv`,
+      pokemons: `${pokeapi}/csv/pokemon_species.csv`,
+      stats: `${pokeapi}/csv/pokemon_stats.csv`,
       images: `${pokeapi}/sprites/pokemon`
     },
     db: {

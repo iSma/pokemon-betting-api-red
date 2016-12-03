@@ -1,4 +1,5 @@
 'use strict'
+const _ = require('lodash')
 const request = require('request-promise')
 
 module.exports.register = (server, options, next) => {
@@ -13,7 +14,35 @@ module.exports.register = (server, options, next) => {
   }
 
   function syncPokemon () {
-    return true
+    const pkmns = request
+      .get(config.api.pokemons)
+      .then((csv) => csv.split('\n').map((row) => row.split(',')))
+      .then((csv) => [_.head(csv), _.tail(csv)])
+      .then(([head, data]) => data.map((row) => _.zipObject(head, row)))
+      .then((pkmns) => _.map(pkmns, (p) => _.at(p, ['id', 'identifier'])))
+      .then(_.fromPairs)
+      .then((pkmns) => _.mapValues(pkmns, (name, id) => ({ name, id: +id })))
+
+    const stats = request
+      .get(config.api.stats)
+      .then((csv) => csv.split('\n').map((row) => row.split(',')))
+      .then((csv) => [_.head(csv), _.tail(csv)])
+      .then(([head, data]) => data.map((row) => _.zipObject(head, row)))
+      .then((stats) => stats.map((s) => _.mapValues(s, _.parseInt)))
+      .then((stats) => stats.map((s) => _.at(s, ['stat_id', 'base_stat', 'pokemon_id'])))
+      .then((stats) => _.filter(stats, (s) => s[0] <= 6))
+      .then((stats) => _.groupBy(stats, (s) => s[2]))
+      .then((stats) => _.mapValues(stats, _.fromPairs))
+      .then((stats) => _.mapValues(stats, (s) => _.at(s, [1, 2, 3, 4, 5, 6])))
+      .then((stats) => _.mapValues(stats, (stats) => ({ stats })))
+
+    return Promise.all([pkmns, stats])
+      .then(([pkmns, stats]) => _.merge(pkmns, stats))
+      .then((pkmns) => _.filter(pkmns, (p) => p.id))
+      .then((pkmns) => _.filter(pkmns, (p) => p.stats))
+      .then((pkmns) => pkmns.map((p) => Pokemon.createFromApi(p)))
+      .then((pkmns) => Promise.all(pkmns))
+      .then((pkmns) => console.log(`> Caught ${pkmns.length} Pokémons`))
   }
 
   function syncExistingBattles () {
@@ -80,7 +109,7 @@ module.exports.register = (server, options, next) => {
       )
   }
 
-  return sync().then(next)
+  return sync().then(() => next())
 }
 
 module.exports.register.attributes = {

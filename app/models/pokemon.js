@@ -1,4 +1,5 @@
 'use strict'
+const _ = require('lodash')
 
 module.exports = (db, DataTypes) => db.define('Pokemon', {
   id: {
@@ -59,6 +60,21 @@ module.exports = (db, DataTypes) => db.define('Pokemon', {
 }, {
   classMethods: {
     associate: function (models) {
+    },
+
+    createFromApi: function (api) {
+      const pkmn = _(['hp', 'atk', 'def', 'spatk', 'spdef', 'speed'])
+        .zipObject(api.stats)
+        .merge(api)
+        .omit('stats')
+        .value()
+
+      return this
+        .findOrCreate({
+          where: { id: api.id },
+          defaults: pkmn
+        })
+        .then(([pkmn, created]) => pkmn)
     }
   }
 })
