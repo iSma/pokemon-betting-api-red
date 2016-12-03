@@ -6,6 +6,7 @@ function Provisioner () {
   this.BETS_PER_USER = 4
 
   const server = { app: {} }
+  require('./config').register(server, { }, () => { })
   require('./models').register(server, { }, () => { })
 
   const { Battle, Bet, User } = server.app.db.models

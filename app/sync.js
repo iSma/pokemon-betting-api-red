@@ -1,16 +1,23 @@
 'use strict'
+const request = require('request-promise')
 
 module.exports.register = (server, options, next) => {
-  const client = server.app.db.client
-  const { Battle } = server.app.db.models
+  const config = server.app.config
+  const { Battle, Pokemon } = server.app.db.models
 
   function sync () {
-    syncExistingBattles()
-    syncNewBattles()
+    return Promise.resolve()
+      .then(syncPokemon)
+      .then(syncExistingBattles)
+      .then(syncNewBattles)
+  }
+
+  function syncPokemon () {
+    return true
   }
 
   function syncExistingBattles () {
-    Battle
+    return Battle
       .findAll({ where: { result: null } })
       .then((battles) => battles.forEach((b) => b.scheduleSync()))
   }
@@ -18,16 +25,16 @@ module.exports.register = (server, options, next) => {
   function syncNewBattles () {
     const now = new Date()
     console.log(`>>> syncNewBattles() ${now})`)
-    getNewBattles()
+    return getNewBattles()
       .then((battles) => console.log(`>>> syncNewBattles > ${battles.length} new battles`))
       .then(() => Battle.findOne({ where: { endTime: null }, order: ['startTime'] }))
       .then((battle) => {
         const now = new Date()
         let next = battle
-          ? battle.startTime - now + 10 * 1000 // TODO: save intervals as global constants
+          ? battle.startTime - now + config.sync.minTime
           : 30 * 1000
 
-        while (next < 0) next += 10 * 60 * 1000 // New battles appear every 10 minutes
+        while (next < 0) next += config.sync.battleTime
         console.log(`>>> syncNewBattles > next sync in ${next / 1000}s`)
         setTimeout(syncNewBattles, next)
       })
@@ -38,7 +45,7 @@ module.exports.register = (server, options, next) => {
     console.log(`getNewBattles()`)
     return Battle.max('id')
       .then((lastId) => Battle.count().then((count) => [lastId, count]))
-      .then(([lastId, count]) => lastId ? findOffset(lastId, count) : 10400)
+      .then(([lastId, count]) => lastId ? findOffset(lastId, count) : 0)
       .then(getBattles)
       .then((battles) => battles.map((b) => Battle.createFromApi(b)))
       .then((battles) => Promise.all(battles))
@@ -53,9 +60,9 @@ module.exports.register = (server, options, next) => {
     console.log(`findOffset(${lastId}, ${offset})`)
     offset = offset || lastId
     return offset <= 0 ? 0
-      : client
-      .get(`battles?limit=100&offset=${offset}`)
-      .then((res) => res.res.statusCode === 200 ? res.body : Promise.reject()) // TODO
+      : request
+      .get(`${config.api.battle}/battles?limit=100&offset=${offset}`)
+      .then((res) => JSON.parse(res))
       .then((battles) => battles.map((b) => b.id).indexOf(lastId))
       .then((i) => i > 0 ? offset + i + 1 : findOffset(lastId, offset - 100))
   }
@@ -63,9 +70,9 @@ module.exports.register = (server, options, next) => {
   // Get all remote battles starting at offset
   function getBattles (offset) {
     console.log(`getBattles(${offset})`)
-    return client
-      .get(`battles?limit=100&offset=${offset}`)
-      .then((res) => res.res.statusCode === 200 ? res.body : Promise.reject()) // TODO
+    return request
+      .get(`${config.api.battle}/battles?limit=100&offset=${offset}`)
+      .then((res) => JSON.parse(res))
       .then((battles) =>
         battles.length < 100
           ? battles
@@ -73,8 +80,7 @@ module.exports.register = (server, options, next) => {
       )
   }
 
-  sync()
-  return next()
+  return sync().then(next)
 }
 
 module.exports.register.attributes = {

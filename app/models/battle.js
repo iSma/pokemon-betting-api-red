@@ -1,5 +1,6 @@
 'use strict'
 const _ = require('lodash')
+const request = require('request-promise')
 
 module.exports = (db, DataTypes) => db.define('Battle', {
   id: {
@@ -98,15 +99,13 @@ module.exports = (db, DataTypes) => db.define('Battle', {
     // Sync this battle's result with remote API. We assume that except for the
     // result, a battle is immutable.
     syncResult: function () {
+      const config = db.app.config
       // Result is already set; can't change this battle anymore
       if (this.result) return Promise.resolve([])
 
-      return db.client
-        .get(`battles/${this.id}`)
-        .then((res) =>
-          res.res.statusCode === 200
-            ? res.body
-            : Promise.reject(res.res)) // TODO
+      return request
+        .get(`${config.api.battle}/battles/${this.id}`)
+        .then((res) => JSON.parse(res))
         .then(this.Model.resultFromApi)
         .then((result) =>
           !result ? []
@@ -120,6 +119,7 @@ module.exports = (db, DataTypes) => db.define('Battle', {
     },
 
     scheduleSync: function () {
+      const config = db.app.config
       const now = new Date()
       if (this.result) {
         console.log(`[${this.id}].scheduleSync() > DONE`)
@@ -127,8 +127,8 @@ module.exports = (db, DataTypes) => db.define('Battle', {
       }
 
       const next = this.endTime
-        ? Math.max(0, this.endTime - now) + 10 * 1000 // TODO: save intervals as global constants
-        : Math.max(0, this.startTime - now) + 10 * 1000
+        ? Math.max(0, this.endTime - now) + config.sync.minTime
+        : Math.max(0, this.startTime - now) + config.sync.minTime
 
       console.log(`[${this.id}].scheduleSync() > in ${next / 1000}s`)
       setTimeout(() => this.syncResult().then(() => this.scheduleSync()), next)

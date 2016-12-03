@@ -2,7 +2,6 @@
 const Joi = require('joi')
 
 module.exports.register = (server, options, next) => {
-  // TODO: Extract API URL to global variable
   const { Battle, Bet } = server.app.db.models
 
   function graph (bets) {

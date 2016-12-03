@@ -24,6 +24,7 @@ const manifest = {
         }
       }
     },
+    { plugin: './config' },
     { plugin: './models' },
     { plugin: './auth' },
     { plugin: './sync' },
