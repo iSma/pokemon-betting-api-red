@@ -31,6 +31,7 @@ const manifest = {
     { plugin: './controllers/users' },
     { plugin: './controllers/battles' },
     { plugin: './controllers/bets' },
+    { plugin: './controllers/trainers' },
     { plugin: './controllers/pokemons' },
     { plugin: './controllers/login' },
     { plugin: './controllers/graph' }
