@@ -117,7 +117,7 @@ module.exports.register = (server, options, next) => {
 }
 
 module.exports.register.attributes = {
-  name: 'session',
+  name: 'login',
   version: '1.0.0',
   dependencies: 'sync'
 }

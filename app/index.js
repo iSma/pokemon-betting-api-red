@@ -31,6 +31,7 @@ const manifest = {
     { plugin: './controllers/users' },
     { plugin: './controllers/battles' },
     { plugin: './controllers/bets' },
+    { plugin: './controllers/pokemons' },
     { plugin: './controllers/login' },
     { plugin: './controllers/graph' }
     // ...
@@ -42,6 +43,16 @@ Glue.compose(manifest, { relativeTo: __dirname }, (err, server) => {
   server.ext('onPreResponse', require('hapi-cors-headers'))
   server.start((err) => {
     if (err) throw err
-    console.log(`Server running at: ${server.info.uri}`)
+    const msg = `Server running at: ${server.info.uri}`
+    const bar = msg.replace(/./g, '=')
+    console.log()
+    console.log()
+    console.log()
+    console.log(bar)
+    console.log(msg)
+    console.log(bar)
+    console.log()
+    console.log()
+    console.log()
   })
 })
