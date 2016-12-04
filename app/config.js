@@ -8,6 +8,11 @@ module.exports.register = (server, options, next) => {
       battleTime: 10 * 60 * 1000,
       minTime: 5 * 1000
     },
+    auth: {
+      nonce: false,
+      expiration: '5m',
+      issuer: 'pokemon-betting-api-red'
+    },
     api: {
       battle: 'http://pokemon-battle.bid/api/v1',
       pokemons: `${pokeapi}/csv/pokemon_species.csv`,
