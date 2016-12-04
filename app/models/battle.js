@@ -26,6 +26,13 @@ module.exports = (db, DataTypes) => db.define('Battle', {
       max: 2
     },
     allowNull: true
+  },
+
+  active: {
+    type: DataTypes.VIRTUAL(DataTypes.BOOLEAN, ['startTime']),
+    get: function () {
+      return this.startTime > new Date()
+    }
   }
 }, {
   classMethods: {

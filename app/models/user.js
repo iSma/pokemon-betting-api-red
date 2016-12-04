@@ -51,20 +51,20 @@ module.exports = (db, DataTypes) => db.define('User', {
     },
 
     getMoney: function () {
-      return db.Model.Transaction
+      return db.models.Transaction
         .sum('amount', { where: { UserId: this.id } })
         .then((money) => Number.isNaN(money) ? 0 : money)
     },
 
     placeBet: function (event, amount, choice) {
       amount = Math.abs(amount)
-      const onBet = event.Model === db.models.Transaction
+      const onBet = event.Model === db.models.Bet
 
       return Promise.resolve(onBet ? event.getBattle() : event)
         .then((battle) =>
           battle.active
             ? true
-            : Promise.reject(Boom.ressourceGone(`Battle ${battle.id} has already started`))
+            : Promise.reject(Boom.resourceGone(`Battle ${battle.id} has already started`))
         )
         .then(() => this.getMoney())
         .then((money) =>
