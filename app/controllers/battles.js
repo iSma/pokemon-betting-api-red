@@ -26,7 +26,7 @@ module.exports.register = (server, options, next) => {
     handler: (req, reply) => {
       // TODO: get all battles with limit/offset
       Battle
-        .scope(req.query.status)
+        .scope('teams', req.query.status)
         .findAll()
         .then(reply)
     },
@@ -61,6 +61,7 @@ module.exports.register = (server, options, next) => {
     path: '/battles/{id}',
     handler: (req, reply) => {
       Battle
+        .scope('teams')
         .findById(req.params.id)
         .then((battle) => Battle.check404(battle))
         .then(reply)

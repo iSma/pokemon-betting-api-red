@@ -74,6 +74,13 @@ module.exports = (db, DataTypes) => db.define('Battle', {
       where: {
         endTime: { $lte: new Date() }
       }
+    }),
+
+    teams: () => ({
+      include: [{
+        model: db.models.Team,
+        include: [db.models.Pokemon]
+      }]
     })
   },
 
