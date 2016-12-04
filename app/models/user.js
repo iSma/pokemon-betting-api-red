@@ -51,14 +51,14 @@ module.exports = (db, DataTypes) => db.define('User', {
     },
 
     getMoney: function () {
-      return this.Model.associations.Transactions.target
+      return db.Model.Transaction
         .sum('amount', { where: { UserId: this.id } })
         .then((money) => Number.isNaN(money) ? 0 : money)
     },
 
     placeBet: function (event, amount, choice) {
       amount = Math.abs(amount)
-      const onBet = event.Model === this.Model.associations.Bets.target
+      const onBet = event.Model === db.models.Transaction
 
       return Promise.resolve(onBet ? event.getBattle() : event)
         .then((battle) =>

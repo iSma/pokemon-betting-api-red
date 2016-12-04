@@ -2,7 +2,6 @@
 const Joi = require('joi')
 
 module.exports.register = (server, options, next) => {
-  // TODO: Extract API URL to global variable
   const { Battle, Bet } = server.app.db.models
 
   function graph (bets) {
@@ -70,7 +69,7 @@ module.exports.register = (server, options, next) => {
       validate: {
         query: {
           status: Joi.string()
-            .valid(['active', 'started', 'finished'])
+            .valid(['active', 'started', 'ended'])
         }
       },
 

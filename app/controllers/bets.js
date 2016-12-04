@@ -36,7 +36,7 @@ module.exports.register = (server, options, next) => {
       validate: {
         query: {
           status: Joi.string()
-            .valid(['active', 'started', 'finished'])
+            .valid(['active', 'started', 'ended'])
             .default('active')
         }
       },

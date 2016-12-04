@@ -1,4 +1,6 @@
 'use strict'
+const _ = require('lodash')
+const request = require('request-promise')
 
 module.exports = (db, DataTypes) => db.define('Battle', {
   id: {
@@ -24,85 +26,68 @@ module.exports = (db, DataTypes) => db.define('Battle', {
       max: 2
     },
     allowNull: true
-  },
-
-  active: {
-    type: DataTypes.VIRTUAL(DataTypes.BOOLEAN, ['startTime']),
-    get: function () {
-      const now = new Date()
-      return this.startTime > now
-    }
-  },
-
-  started: {
-    type: DataTypes.VIRTUAL(DataTypes.BOOLEAN, ['startTime']),
-    get: function () {
-      const now = new Date()
-      return this.startTime <= now && this.endTime > now
-    }
-  },
-
-  finished: {
-    type: DataTypes.VIRTUAL(DataTypes.BOOLEAN, ['endTime']),
-    get: function () {
-      const now = new Date()
-      return this.endTime <= now
-    }
   }
-
 }, {
   classMethods: {
     associate: function (models) {
       this.hasMany(models.Bet, { foreignKey: { allowNull: false } })
-
-      this.addScope('active', function () {
-        return {
-          where: {
-            startTime: { $gt: new Date() }
-          }
-        }
-      })
-
-      this.addScope('started', function () {
-        return {
-          where: {
-            startTime: { $lte: new Date() },
-            endTime: { $gt: new Date() }
-          }
-        }
-      })
-
-      this.addScope('finished', function () {
-        return {
-          where: {
-            endTime: { $lte: new Date() }
-          }
-        }
-      })
+      this.hasMany(models.Team, { foreignKey: { allowNull: false } })
     },
 
-    fromApi: function (battle) {
-      return {
-        id: battle.id,
-        startTime: new Date(battle.start_time),
-        endTime: battle.end_time ? new Date(battle.end_time) : null,
-        result:
-          battle.winner
-          ? 1 + (battle.winner.trainer_id !== battle.team1.trainer.id)
-          : null
-        // TODO: add trainers
-      }
+    resultFromApi: (api) => !api.winner ? null
+      : api.winner.trainer_id === api.team1.trainer.id ? 1 : 2,
+
+    createFromApi: function (api) {
+      return this
+        .findOrCreate({
+          where: { id: api.id },
+          defaults: {
+            startTime: new Date(api.start_time),
+            endTime: !api.end_time ? null : new Date(api.end_time),
+            result: this.resultFromApi(api)
+          }
+        })
+        .then(([battle, created]) =>
+          !created ? battle
+            : Promise.resolve([api.team1, api.team2])
+            .then((teams) => teams.map((t, i) => db.models.Team.createFromApi(t, battle, i)))
+            .then((teams) => Promise.all(teams))
+            .then((teams) => battle))
     }
+  },
+
+  scopes: {
+    active: () => ({
+      where: {
+        startTime: { $gt: new Date() }
+      }
+    }),
+
+    started: () => ({
+      where: {
+        startTime: { $lte: new Date() },
+        endTime: { $gt: new Date() }
+      }
+    }),
+
+    ended: () => ({
+      where: {
+        endTime: { $lte: new Date() }
+      }
+    }),
+
+    teams: () => ({
+      include: [{
+        model: db.models.Team,
+        include: [db.models.Pokemon]
+      }]
+    })
   },
 
   instanceMethods: {
     getOdds: function () {
-      const Transaction = this.Model
-        .associations.Bets.target
-        .associations.Transaction.target
-
       return this
-        .getBets({ include: Transaction })
+        .getBets({ include: db.models.Bet.associations.Transaction })
         .then((bets) => bets.filter((b) => b.ParentId === null))
         .then((bets) =>
           bets.reduce(([win, lose], bet) =>
@@ -112,31 +97,30 @@ module.exports = (db, DataTypes) => db.define('Battle', {
             [0, 0]))
     },
 
-    // Sync this battle with remote API
-    syncRemote: function () {
-      return db.client
-        .get(`battles/${this.id}`)
-        .then((res) =>
-          res.res.statusCode === 200
-            ? res.body
-            : Promise.reject(res.res)) // TODO
-        .then((battle) => this.Model.fromApi(battle))
-        .then((battle) => this.set(battle))
-        .then(() =>
-          this.changed('result')
-            ? db.transaction((t) => {
-              return this
-                .save({ transaction: t })
+    // Sync this battle's result with remote API. We assume that except for the
+    // result, a battle is immutable.
+    syncResult: function () {
+      const config = db.app.config
+      // Result is already set; can't change this battle anymore
+      if (this.result) return Promise.resolve([])
+
+      return request
+        .get(`${config.api.battle}/battles/${this.id}`)
+        .then((res) => JSON.parse(res))
+        .then(this.Model.resultFromApi)
+        .then((result) =>
+          !result ? []
+            : db.transaction((t) => this
+              .update({ result: result }, { transaction: t })
                 .then(() => this.getBets({ transaction: t }))
-                .then((bets) => bets.map((b) => b.updateResult(this.result, t)))
+                .then((bets) => bets.map((b) => b.syncResult(this.result, t)))
                 .then((updates) => Promise.all(updates))
-            })
-            : this.save()
-        )
-        .then(() => this)
+                .then(_.flatMap)
+            ))
     },
 
     scheduleSync: function () {
+      const config = db.app.config
       const now = new Date()
       if (this.result) {
         console.log(`[${this.id}].scheduleSync() > DONE`)
@@ -144,11 +128,11 @@ module.exports = (db, DataTypes) => db.define('Battle', {
       }
 
       const next = this.endTime
-      ? Math.max(0, this.endTime - now) + 10 * 1000 // TODO: save intervals as global constants
-      : Math.max(0, this.startTime - now) + 10 * 1000
+        ? Math.max(0, this.endTime - now) + config.sync.minTime
+        : Math.max(0, this.startTime - now) + config.sync.minTime
 
       console.log(`[${this.id}].scheduleSync() > in ${next / 1000}s`)
-      setTimeout(() => this.syncRemote().then(() => this.scheduleSync()), next)
+      setTimeout(() => this.syncResult().then(() => this.scheduleSync()), next)
     }
   }
 })

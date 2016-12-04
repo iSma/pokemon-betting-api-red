@@ -3,17 +3,18 @@
 const Sequelize = require('sequelize')
 const Joi = require('joi')
 const JoiSequelize = require('joi-sequelize')
-const request = require('request-json')
 const Boom = require('boom')
 
 module.exports.register = (server, options, next) => {
+  const config = server.app.config.db
   const db = new Sequelize(
-    process.env.POSTGRES_DATABSE,
-    process.env.POSTGRES_USER,
-    process.env.POSTGRES_PASSWORD, {
-      host: process.env.POSTGRES_HOST,
+    config.db,
+    config.user,
+    config.pass,
+    {
+      host: config.host,
       dialect: 'postgres',
-      port: 5432,
+      port: config.port,
       define: {
         timestamps: false,
         classMethods: {
@@ -28,19 +29,19 @@ module.exports.register = (server, options, next) => {
       }
     })
 
-  db.client = request.createClient('http://pokemon-battle.bid/api/v1/')
-
   server.app.db = db
+  server.app.db.app = server.app
   server.app.joi = {
     ID: Joi.number().integer().positive()
-  };
+  }
 
-  ['battle', 'bet', 'trainer', 'user', 'transaction']
-    .map((name) => `./${name}.js`)
+  require('fs')
+    .readdirSync('./models')
+    .filter((file) => file !== 'index.js')
     .forEach((file) => {
       const model = db.import(file)
-      const joi = new JoiSequelize(require(file))
-      server.app.joi[model.name] = joi
+      const joi = new JoiSequelize(require(`./${file}`))
+      server.app.joi[model.name] = joi // TODO: move Joi schema to class method
     })
 
   for (const model in db.models) {
@@ -55,6 +56,7 @@ module.exports.register = (server, options, next) => {
 
 module.exports.register.attributes = {
   name: 'models',
-  version: '1.0.0'
+  version: '1.0.0',
+  dependencies: 'config'
 }
 
