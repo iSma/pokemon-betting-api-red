@@ -60,6 +60,7 @@ module.exports = (db, DataTypes) => db.define('Pokemon', {
 }, {
   classMethods: {
     associate: function (models) {
+      this.belongsToMany(models.Team, { through: 'TeamPokemon' })
     },
 
     createFromApi: function (api) {

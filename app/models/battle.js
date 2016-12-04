@@ -50,13 +50,7 @@ module.exports = (db, DataTypes) => db.define('Battle', {
         .then(([battle, created]) =>
           !created ? battle
             : Promise.resolve([api.team1, api.team2])
-            .then((teams) =>
-              teams.map((t, i) =>
-                db.models.Trainer
-                  .createFromApi(t.trainer)
-                  .then((trainer) => battle.createTeam({ index: i + 1, TrainerId: trainer.id }))
-                  .then((team) => team)// TODO: add pokemons
-              ))
+            .then((teams) => teams.map((t, i) => db.models.Team.createFromApi(t, battle, i)))
             .then((teams) => Promise.all(teams))
             .then((teams) => battle))
     }
