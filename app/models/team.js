@@ -25,6 +25,15 @@ module.exports = (db, DataTypes) => db.define('Team', {
         .then((trainer) => battle.createTeam({ index: i + 1, TrainerId: trainer.id }))
         .then((team) => team.setPokemons(api.pokemons.map((p) => p.id)))
     }
+  },
+
+  instanceMethods: {
+    toJSON: function () {
+      return {
+        trainer: this.TrainerId,
+        pokemons: this.Pokemons.map((p) => p.id)
+      }
+    }
   }
 })
 

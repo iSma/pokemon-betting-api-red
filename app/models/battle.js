@@ -104,6 +104,18 @@ module.exports = (db, DataTypes) => db.define('Battle', {
             [0, 0]))
     },
 
+    toJSON: function () {
+      const json = _.pick(this, ['id', 'startTime', 'endTime', 'result'])
+
+      if (this.Teams) {
+        const indices = this.Teams.map((t) => t.index)
+        const teams = this.Teams.map((t) => t.toJSON())
+        json.teams = _.zipObject(indices, teams)
+      }
+
+      return json
+    },
+
     // Sync this battle's result with remote API. We assume that except for the
     // result, a battle is immutable.
     syncResult: function () {

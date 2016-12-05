@@ -99,6 +99,15 @@ module.exports = (db, DataTypes) => db.define('Bet', {
         .then((t) => -t.amount)
     },
 
+    toJSON: function () {
+      const json = _.pick(this, ['id', 'startTime', 'endTime', 'result'])
+      return _.merge(json, {
+        user: this.UserId,
+        battle: this.BattleId,
+        parent: this.ParentId
+      })
+    },
+
     syncResult: function (result, { transaction: t }) {
       // TODO: Distribute money
       const r = 1 + (this.choice !== result)
