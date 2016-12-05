@@ -195,6 +195,7 @@ module.exports.register = (server, options, next) => {
       checkPermissions(req)
         .then((user) => User.check404(user))
         .then((user) => user.getMoney())
+        .then((balance) => ({ balance }))
         .then(reply) // TODO: send new token
         .catch(reply)
     },

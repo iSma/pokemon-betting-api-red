@@ -7,13 +7,12 @@ const key = (size = 64) => require('crypto').randomBytes(size).toString('base64'
 
 module.exports.register = (server, options, next) => {
   const { User } = server.app.db.models
+  const config = server.app.config.auth
 
   const nonces = { }
 
   const secret = key(256) // Generate new key on server startup
   const ISSUER = 'pokemon-betting-api-red'
-  const NONCE = false
-  const EXPIRATION = '5m'
 
   function token (user) {
     if (!user) throw Boom.unauthorized('Wrong username/password')
@@ -33,9 +32,9 @@ module.exports.register = (server, options, next) => {
     nonces[tok.sub] = key(16)
 
     return JWT.sign(tok, secret, {
-      expiresIn: EXPIRATION || undefined,
-      jwtid: NONCE ? nonces[tok.sub] : undefined,
-      issuer: ISSUER
+      expiresIn: config.expiration || undefined,
+      jwtid: config.nonce ? nonces[tok.sub] : undefined,
+      issuer: config.issuer
     })
   }
 
@@ -57,9 +56,9 @@ module.exports.register = (server, options, next) => {
     // User isn't authenticated in this server session
     if (!nonces[tok.sub]) return callback(null, false)
     // Nonce is stale
-    if (NONCE && nonces[tok.sub] !== tok.jti) return callback(null, false)
+    if (config.nonce && nonces[tok.sub] !== tok.jti) return callback(null, false)
     // Token has no expiration time
-    if (EXPIRATION && !tok.exp) return callback(null, false)
+    if (config.expiration && !tok.exp) return callback(null, false)
 
     // Return fresh token, will be available as req.auth.credential.next
     tok.next = renonce(tok)

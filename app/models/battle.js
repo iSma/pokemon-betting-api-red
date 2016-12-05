@@ -26,6 +26,13 @@ module.exports = (db, DataTypes) => db.define('Battle', {
       max: 2
     },
     allowNull: true
+  },
+
+  active: {
+    type: DataTypes.VIRTUAL(DataTypes.BOOLEAN, ['startTime']),
+    get: function () {
+      return this.startTime > new Date()
+    }
   }
 }, {
   classMethods: {
@@ -87,14 +94,26 @@ module.exports = (db, DataTypes) => db.define('Battle', {
   instanceMethods: {
     getOdds: function () {
       return this
-        .getBets({ include: db.models.Bet.associations.Transaction })
+        .getBets({ include: db.models.Bet.associations.BetTransaction })
         .then((bets) => bets.filter((b) => b.ParentId === null))
         .then((bets) =>
           bets.reduce(([win, lose], bet) =>
             (bet.choice === 1)
-              ? [win - bet.Transaction.amount, lose]
-              : [win, lose - bet.Transaction.amount],
+              ? [win - bet.BetTransaction.amount, lose]
+              : [win, lose - bet.BetTransaction.amount],
             [0, 0]))
+    },
+
+    toJSON: function () {
+      const json = _.pick(this, ['id', 'startTime', 'endTime', 'result'])
+
+      if (this.Teams) {
+        const indices = this.Teams.map((t) => t.index)
+        const teams = this.Teams.map((t) => t.toJSON())
+        json.teams = _.zipObject(indices, teams)
+      }
+
+      return json
     },
 
     // Sync this battle's result with remote API. We assume that except for the

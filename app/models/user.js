@@ -51,39 +51,30 @@ module.exports = (db, DataTypes) => db.define('User', {
     },
 
     getMoney: function () {
-      return db.Model.Transaction
+      return db.models.Transaction
         .sum('amount', { where: { UserId: this.id } })
         .then((money) => Number.isNaN(money) ? 0 : money)
     },
 
     placeBet: function (event, amount, choice) {
       amount = Math.abs(amount)
-      const onBet = event.Model === db.models.Transaction
+      const onBet = event.Model === db.models.Bet
 
-      return Promise.resolve(onBet ? event.getBattle() : event)
-        .then((battle) =>
-          battle.active
-            ? true
-            : Promise.reject(Boom.ressourceGone(`Battle ${battle.id} has already started`))
-        )
-        .then(() => this.getMoney())
-        .then((money) =>
-          money >= amount
-            ? true
-            : Promise.reject(Boom.paymentRequired(`Not enough money (available funds: ${money})`))
-        )
-        .then(() =>
-          db.transaction((t) =>
-            this
-              .createTransaction({ amount: -amount }, { transaction: t })
-              .then((transaction) =>
-                this.createBet({
-                  choice: choice,
-                  BattleId: onBet ? event.BattleId : event.id,
-                  ParentId: onBet ? event.id : null,
-                  TransactionId: transaction.id
-                }, { transaction: t }))
-          ))
+      return db.transaction((t) =>
+        Promise.resolve(onBet ? event.getBattle({ transaction: t }) : event)
+          .then((battle) => battle.active ? true
+            : Promise.reject(Boom.resourceGone(`Battle ${battle.id} has already started`)))
+          .then(() => this.getMoney({ transaction: t }))
+          .then((money) => money >= amount ? true
+            : Promise.reject(Boom.paymentRequired(`Not enough money (available funds: ${money})`)))
+          .then(() => this.createTransaction({ amount: -amount }, { transaction: t }))
+          .then((trns) => this.createBet({
+            choice: choice,
+            BattleId: onBet ? event.BattleId : event.id,
+            ParentId: onBet ? event.id : null,
+            BetTransactionId: trns.id
+          }, { transaction: t }))
+      )
     }
   },
 
