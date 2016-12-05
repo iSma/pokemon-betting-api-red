@@ -94,13 +94,13 @@ module.exports = (db, DataTypes) => db.define('Battle', {
   instanceMethods: {
     getOdds: function () {
       return this
-        .getBets({ include: db.models.Bet.associations.Transaction })
+        .getBets({ include: db.models.Bet.associations.BetTransaction })
         .then((bets) => bets.filter((b) => b.ParentId === null))
         .then((bets) =>
           bets.reduce(([win, lose], bet) =>
             (bet.choice === 1)
-              ? [win - bet.Transaction.amount, lose]
-              : [win, lose - bet.Transaction.amount],
+              ? [win - bet.BetTransaction.amount, lose]
+              : [win, lose - bet.BetTransaction.amount],
             [0, 0]))
     },
 

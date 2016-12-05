@@ -46,7 +46,7 @@ module.exports = (db, DataTypes) => db.define('Bet', {
       this.belongsTo(models.Battle, { foreignKey: { allowNull: false } })
       this.belongsTo(models.User, { foreignKey: { allowNull: false } })
 
-      this.belongsTo(models.Transaction, { foreignKey: { allowNull: false } })
+      this.belongsTo(models.Transaction, { as: 'BetTransaction', foreignKey: { allowNull: false } })
       this.belongsTo(models.Transaction, { as: 'WinTransaction' })
     }
   },
@@ -84,18 +84,18 @@ module.exports = (db, DataTypes) => db.define('Bet', {
   instanceMethods: {
     getOdds: function () {
       return this
-        .getBets({ include: this.Model.associations.Transaction })
+        .getBets({ include: this.Model.associations.BetTransaction })
         .then((bets) =>
           bets.reduce(([win, lose], bet) =>
             (bet.choice === 1)
-              ? [win - bet.Transaction.amount, lose]
-              : [win, lose - bet.Transaction.amount],
+              ? [win - bet.BetTransaction.amount, lose]
+              : [win, lose - bet.BetTransaction.amount],
             [0, 0]))
     },
 
     getAmount: function () {
       return this
-        .getTransaction()
+        .getBetTransaction()
         .then((t) => -t.amount)
     },
 
