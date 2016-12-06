@@ -114,7 +114,7 @@ module.exports = (db, DataTypes) => db.define('Bet', {
       return this
         .update({ result: result }, { transaction: t })
         .then(() => this.getBets({ transaction: t }))
-        .then((bets) => bets.map((b) => b.updateResult(r, { transaction: t })))
+        .then((bets) => bets.map((b) => b.syncResult(r, { transaction: t })))
         .then(_.flatMap)
         .then((updates) => Promise.all(updates))
     }
