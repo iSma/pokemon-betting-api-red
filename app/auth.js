@@ -12,7 +12,6 @@ module.exports.register = (server, options, next) => {
   const nonces = { }
 
   const secret = key(256) // Generate new key on server startup
-  const ISSUER = 'pokemon-betting-api-red'
 
   function token (user) {
     if (!user) throw Boom.unauthorized('Wrong username/password')
@@ -77,7 +76,7 @@ module.exports.register = (server, options, next) => {
       validateFunc: validate,
       verifyOptions: {
         algorithms: ['HS256'],
-        issuer: ISSUER
+        issuer: config.issuer
       }
     })
 
