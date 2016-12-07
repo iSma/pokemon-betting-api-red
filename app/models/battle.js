@@ -137,7 +137,7 @@ module.exports = (db, DataTypes) => db.define('Battle', {
                 ])
                 .then((x) => Promise.all(x))
                 .then(([bets, odds]) =>
-                  bets.map((b) => b.syncResult(this.result, odds, { transaction: t})))
+                  bets.map((b) => b.syncResult(this.result, odds, { transaction: t })))
                 .then((updates) => Promise.all(updates))
                 .then(_.flatMap)
             ))
