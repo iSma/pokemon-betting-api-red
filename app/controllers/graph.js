@@ -9,6 +9,10 @@ module.exports.register = (server, options, next) => {
     let ids = bets.map((b) => b.BattleId)
     return Battle
       .findAll({ where: { id: { $in: [...new Set(ids)] } } })
+      .then((battles) =>
+        battles.map((b) =>
+          b.getOdds().then((odds) => { b.odds = odds }).then(() => b)))
+      .then((battles) => Promise.all(battles))
       .then((battles) => battles.map(node).concat(graph))
       .then((graph) => graph.join('\n  '))
       .then((graph) => `digraph {\n  ${graph}\n  \n}\n`)
@@ -20,8 +24,9 @@ module.exports.register = (server, options, next) => {
       node = `battles/${event.id}`
       label =
         `${event.id}\n` +
-        `result:${event.result}`
-      shape = 'invhouse'
+        `result:${event.result}\n` +
+        `odds: [${event.odds.join(':')}]`
+        shape = 'invhouse'
       color = event.result === null
         ? 'white'
         : event.result === 1 ? 'cyan' : 'yellow'
@@ -31,8 +36,11 @@ module.exports.register = (server, options, next) => {
         `${event.id}\n` +
         `users/${event.UserId}\n` +
         `choice:${event.choice}\n` +
-        `result:${event.result}`
-      shape = 'note'
+        `result:${event.result}\n` +
+        `odds: [${event.odds.join(':')}]\n` +
+        `$$$: ${!event.BetTransaction ? 0 : -event.BetTransaction.amount}\n` +
+        `win: ${!event.WinTransaction ? 0 : +event.WinTransaction.amount}`
+        shape = 'note'
       color = event.won === null
         ? 'white'
         : event.won ? 'green' : 'red'
@@ -56,9 +64,16 @@ module.exports.register = (server, options, next) => {
     method: 'GET',
     path: '/graph',
     handler: (req, reply) => {
+      const scopes = req.query.status
+        ? ['transactions', req.query.status]
+        : ['transactions']
       Bet
-        .scope(req.query.status)
+        .scope(scopes)
         .findAll()
+        .then((bets) =>
+          bets.map((b) =>
+            b.getOdds().then((odds) => { b.odds = odds }).then(() => b)))
+        .then((bets) => Promise.all(bets))
         .then(graph)
         .then(reply)
     },
