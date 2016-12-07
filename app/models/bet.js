@@ -91,7 +91,7 @@ module.exports = (db, DataTypes) => db.define('Bet', {
   instanceMethods: {
     getOdds: function ({ transaction: t } = {}) {
       return this
-        .getBets({ include: this.Model.associations.BetTransaction, transaction: t })
+        .getBets({ scope: 'transactions', transaction: t })
         .then((bets) =>
           bets.reduce(([w, l], bet) =>
             (bet.choice === 1)

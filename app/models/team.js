@@ -27,12 +27,21 @@ module.exports = (db, DataTypes) => db.define('Team', {
     }
   },
 
+  scopes: {
+    pokemons: () => ({
+      include: [db.models.Pokemon]
+    }),
+
+    battle: () => ({
+      include: [db.models.Battle]
+    }),
+  },
+
   instanceMethods: {
     toJSON: function () {
-      return {
-        trainer: this.TrainerId,
-        pokemons: this.Pokemons.map((p) => p.id)
-      }
+      const json = { trainer: this.TrainerId }
+      if (this.Pokemons) json.pokemons = this.Pokemons.map((p) => p.id)
+      return json
     }
   }
 })

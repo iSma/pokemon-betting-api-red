@@ -84,17 +84,14 @@ module.exports = (db, DataTypes) => db.define('Battle', {
     }),
 
     teams: () => ({
-      include: [{
-        model: db.models.Team,
-        include: [db.models.Pokemon]
-      }]
+      include: [db.models.Team.scope('pokemons')]
     })
   },
 
   instanceMethods: {
     getOdds: function ({ transaction: t } = {}) {
       return this
-        .getBets({ include: db.models.Bet.associations.BetTransaction, transaction: t })
+        .getBets({ scope: 'transactions', transaction: t })
         .then((bets) => bets.filter((b) => b.ParentId === null))
         .then((bets) =>
           bets.reduce(([w, l], bet) =>
