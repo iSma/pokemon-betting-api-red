@@ -92,15 +92,15 @@ module.exports = (db, DataTypes) => db.define('Battle', {
   },
 
   instanceMethods: {
-    getOdds: function () {
+    getOdds: function ({ transaction: t } = {}) {
       return this
-        .getBets({ include: db.models.Bet.associations.BetTransaction })
+        .getBets({ include: db.models.Bet.associations.BetTransaction, transaction: t })
         .then((bets) => bets.filter((b) => b.ParentId === null))
         .then((bets) =>
-          bets.reduce(([win, lose], bet) =>
+          bets.reduce(([w, l], bet) =>
             (bet.choice === 1)
-              ? [win - bet.BetTransaction.amount, lose]
-              : [win, lose - bet.BetTransaction.amount],
+              ? [w - bet.BetTransaction.amount, l]
+              : [w, l - bet.BetTransaction.amount],
             [0, 0]))
     },
 
@@ -131,8 +131,13 @@ module.exports = (db, DataTypes) => db.define('Battle', {
           !result ? []
             : db.transaction((t) => this
               .update({ result: result }, { transaction: t })
-                .then(() => this.getBets({ transaction: t }))
-                .then((bets) => bets.map((b) => b.syncResult(this.result, t)))
+                .then(() => [
+                  this.getBets({ where: {ParentId: null}, transaction: t }),
+                  this.getOdds({ transaction: t })
+                ])
+                .then((x) => Promise.all(x))
+                .then(([bets, odds]) =>
+                  bets.map((b) => b.syncResult(this.result, odds, { transaction: t})))
                 .then((updates) => Promise.all(updates))
                 .then(_.flatMap)
             ))

@@ -52,6 +52,13 @@ module.exports = (db, DataTypes) => db.define('Bet', {
   },
 
   scopes: {
+    transactions: () => ({
+      include: [
+        db.models.Bet.associations.BetTransaction,
+        db.models.Bet.associations.WinTransaction
+      ]
+    }),
+
     active: () => ({
       include: [{
         model: db.models.Battle,
@@ -82,25 +89,25 @@ module.exports = (db, DataTypes) => db.define('Bet', {
   },
 
   instanceMethods: {
-    getOdds: function () {
+    getOdds: function ({ transaction: t } = {}) {
       return this
-        .getBets({ include: this.Model.associations.BetTransaction })
+        .getBets({ include: this.Model.associations.BetTransaction, transaction: t })
         .then((bets) =>
-          bets.reduce(([win, lose], bet) =>
+          bets.reduce(([w, l], bet) =>
             (bet.choice === 1)
-              ? [win - bet.BetTransaction.amount, lose]
-              : [win, lose - bet.BetTransaction.amount],
+              ? [w - bet.BetTransaction.amount, l]
+              : [w, l - bet.BetTransaction.amount],
             [0, 0]))
     },
 
-    getAmount: function () {
+    getAmount: function ({ transaction: t } = {}) {
       return this
-        .getBetTransaction()
+        .getBetTransaction({ transaction: t })
         .then((t) => -t.amount)
     },
 
     toJSON: function () {
-      const json = _.pick(this, ['id', 'startTime', 'endTime', 'result'])
+      const json = _.pick(this, ['id', 'startTime', 'endTime', 'choice', 'result'])
       return _.merge(json, {
         user: this.UserId,
         battle: this.BattleId,
@@ -108,15 +115,29 @@ module.exports = (db, DataTypes) => db.define('Bet', {
       })
     },
 
-    syncResult: function (result, { transaction: t }) {
-      // TODO: Distribute money
+    syncResult: function (result, [w, l], { transaction: t } = {}) {
+      // TODO: Keep percentage of wins + unclaimed money
       const r = 1 + (this.choice !== result)
+      const total = w + l
+      const share = this.choice === 1 ? w : l
+
       return this
-        .update({ result: result }, { transaction: t })
-        .then(() => this.getBets({ transaction: t }))
-        .then((bets) => bets.map((b) => b.syncResult(r, { transaction: t })))
-        .then(_.flatMap)
+        .update({ result }, { transaction: t })
+        .then(() => !this.won ? null
+          : this
+            .getAmount({ transaction: t })
+            .then((amount) => amount / share * total)
+            .then((amount) => ({ amount, UserId: this.UserId }))
+            .then((wintr) => this.createWinTransaction(wintr, { transaction: t })))
+        .then(() => [
+          this.getBets({ transaction: t }),
+          this.getOdds({ transaction: t })
+        ])
+        .then((x) => Promise.all(x))
+        .then(([bets, odds]) =>
+          bets.map((b) => b.syncResult(r, odds, { transaction: t})))
         .then((updates) => Promise.all(updates))
+        .then(_.flatMap)
     }
   }
 })

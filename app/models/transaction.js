@@ -25,7 +25,7 @@ module.exports = (db, DataTypes) => db.define('Transaction', {
       this.hasOne(models.Bet, { as: 'Win', foreignKey: 'WinTransactionId' })
 
       this.belongsTo(models.User, { foreignKey: { allowNull: false } })
-    },
+    }
   },
 
   scopes: {
