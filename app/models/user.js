@@ -82,7 +82,7 @@ module.exports = (db, DataTypes) => db.define('User', {
 
     getStats: function () {
       return this
-        .getBets()
+        .getBets({ scope: 'ended' })
         .then((bets) => {
           const onBattle = bets.filter((b) => !b.ParentId)
           const onBet = bets.filter((b) => b.ParentId)
