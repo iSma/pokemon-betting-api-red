@@ -1,9 +1,8 @@
 'use strict'
-const Joi = require('joi')
 
 module.exports.register = (server, options, next) => {
   const { Bet, User } = server.app.db.models
-  const J = server.app.joi
+  const Joi = server.app.Joi
 
   // Routes covered in this module:
   // - /bets
@@ -71,7 +70,7 @@ module.exports.register = (server, options, next) => {
       description: 'Get a bet',
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         }
       },
 
@@ -110,7 +109,7 @@ module.exports.register = (server, options, next) => {
       description: 'List all bets made on this bet',
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         }
       },
 
@@ -152,7 +151,7 @@ module.exports.register = (server, options, next) => {
 
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         },
         payload: {
           amount: Joi.number().positive().required(),
@@ -202,7 +201,7 @@ module.exports.register = (server, options, next) => {
       description: 'Get odds on a bet',
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         }
       },
 

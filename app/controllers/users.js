@@ -1,10 +1,9 @@
 'use strict'
 const Boom = require('boom')
-const Joi = require('joi')
 
 module.exports.register = (server, options, next) => {
   const { User } = server.app.db.models
-  const J = server.app.joi
+  const Joi = server.app.Joi
 
   // Routes covered in this module:
   // - /users
@@ -74,7 +73,7 @@ module.exports.register = (server, options, next) => {
 
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         }
       },
 
@@ -114,7 +113,7 @@ module.exports.register = (server, options, next) => {
 
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         }
       },
 
@@ -155,7 +154,7 @@ module.exports.register = (server, options, next) => {
 
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         },
         query: {
           token: Joi.string()
@@ -215,7 +214,7 @@ module.exports.register = (server, options, next) => {
           responses: {
             201: {
               description: 'User created',
-              schema: Joi.object({ id: J.ID })
+              schema: Joi.object({ id: Joi.id() })
             },
             422: {
               description: 'User name or mail already exists',
@@ -247,7 +246,7 @@ module.exports.register = (server, options, next) => {
 
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         },
         query: {
           token: Joi.string()
@@ -289,7 +288,7 @@ module.exports.register = (server, options, next) => {
 
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         },
         query: {
           token: Joi.string()
@@ -340,7 +339,7 @@ module.exports.register = (server, options, next) => {
           amount: Joi.number().required()
         },
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         },
         query: {
           token: Joi.string()
@@ -353,7 +352,7 @@ module.exports.register = (server, options, next) => {
             201: {
               description: 'Success',
               schema: Joi.object({
-                transaction: J.ID,
+                transaction: Joi.id(),
                 balance: Joi.number()
               })
             },
