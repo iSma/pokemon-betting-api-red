@@ -15,7 +15,7 @@ module.exports.register = (server, options, next) => {
   //  + DELETE
   //  + PATCH: Update profile
   // - /users/{id}/bets
-  //  TODO+ GET
+  //  TODO+ GET?
   // - /users/{id}/stats
   //  TODO+ GET
   // - /users/{id}/transactions (only visible to user)
@@ -64,6 +64,46 @@ module.exports.register = (server, options, next) => {
       User
         .findById(req.params.id, { attributes: ['name'] })
         .then((user) => User.check404(user))
+        .then(reply)
+        .catch(reply)
+    },
+
+    config: {
+      tags: ['api'],
+      description: 'Get a user',
+
+      validate: {
+        params: {
+          id: J.ID.required()
+        }
+      },
+
+      plugins: {
+        'hapi-swagger': {
+          'responses': {
+            200: {
+              description: 'Success',
+              schema: J.User.joi()
+            },
+            404: {
+              description: 'User not found',
+              schema: Joi.object()
+            }
+          }
+        }
+      }
+    }
+  })
+
+  // GET /users/{id}/stats
+  server.route({
+    method: 'GET',
+    path: '/users/{id}/stats',
+    handler: (req, reply) => {
+      User
+        .findById(req.params.id)
+        .then((user) => User.check404(user))
+        .then((user) => user.getStats())
         .then(reply)
         .catch(reply)
     },

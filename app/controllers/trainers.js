@@ -16,7 +16,7 @@ module.exports.register = (server, options, next) => {
   //  TODO+ GET: list of battles this trainer is participating in
   //
   // - /trainers/{id}/stats
-  //  TODO+ GET
+  //  + GET
 
   // GET /trainers
   server.route({

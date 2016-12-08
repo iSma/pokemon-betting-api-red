@@ -56,6 +56,35 @@ module.exports = (db, DataTypes) => db.define('User', {
         .then((money) => Number.isNaN(money) ? 0 : money)
     },
 
+    getStats: function () {
+      return this
+        .getBets()
+        .then((bets) => {
+          const onBattle = bets.filter((b) => !b.ParentId)
+          const onBet = bets.filter((b) => b.ParentId)
+
+          return {
+            id: this.id,
+
+            total: bets.length,
+            won: bets.filter((b) => b.won).length,
+            lost: bets.filter((b) => !b.won).length,
+
+            onBattle: {
+              total: onBattle.length,
+              won: onBattle.filter((b) => b.won).length,
+              lost: onBattle.filter((b) => !b.won).length,
+            },
+
+            onBet: {
+              total: onBet.length,
+              won: onBet.filter((b) => b.won).length,
+              lost: onBet.filter((b) => !b.won).length,
+            }
+          }
+        })
+    },
+
     placeBet: function (event, amount, choice) {
       amount = Math.abs(amount)
       const onBet = event.Model === db.models.Bet

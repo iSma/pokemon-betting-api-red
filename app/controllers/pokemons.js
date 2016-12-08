@@ -22,7 +22,7 @@ module.exports.register = (server, options, next) => {
   //  TODO+ GET: list of battles this pokemon is participating in
   //
   // - /pokemons/{id}/stats
-  //  TODO+ GET
+  // + GET
 
   // GET /pokemons
   server.route({
