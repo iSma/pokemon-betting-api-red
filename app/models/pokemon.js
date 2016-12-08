@@ -82,12 +82,15 @@ module.exports = (db, DataTypes) => db.define('Pokemon', {
   instanceMethods: {
     getStats: function () {
       return this
-        .getTeams({ scope: ['battle', 'pokemons'] })
+        .getTeams({ include: [db.models.Battle.scope('teams')] })
         .then((teams) => teams.filter((t) => t.Battle.result))
-        .then((teams) => teams.map((team) => team.getOpponent().then((opp) => [team, opp])))
-        .then((teams) => Promise.all(teams))
-        .then((teams) => teams.map(([team, opp]) => ({
-          won: team.index === team.Battle.result,
+        .then((teams) => teams.map((team) => [
+          team.index === team.Battle.result,
+          _.find(team.Battle.Teams, (t) => t.index === team.index),
+          _.find(team.Battle.Teams, (t) => t.index !== team.index),
+        ]))
+        .then((teams) => teams.map(([won, team, opp]) => ({
+          won,
           team: {
             trainer: team.TrainerId,
             pokemons: team.Pokemons.map((p) => p.id)
