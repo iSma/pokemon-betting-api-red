@@ -23,21 +23,23 @@ module.exports.register = (server, options, next) => {
     if (event.Model === Battle) {
       node = `battles/${event.id}`
       label = `${event.id}
-        result:${event.result}
-        odds: [${event.odds.join(':')}]`
-      shape = 'invhouse'
+start: ${event.startTime.toJSON()}
+end: ${event.endTime.toJSON()}
+result:${event.result}
+odds: [${event.odds.join(':')}]`
+      shape = 'box'
       color = event.result === null
         ? 'white'
         : event.result === 1 ? 'cyan' : 'yellow'
     } else {
       node = `bets/${event.id}`
       label = `${event.id}
-        users/${event.UserId}
-        choice:${event.choice}
-        result:${event.result}
-        odds: [${event.odds.join(':')}]
-        $$$: ${!event.BetTransaction ? 0 : -event.BetTransaction.amount}
-        win: ${!event.WinTransaction ? 0 : +event.WinTransaction.amount}`
+users/${event.UserId}
+choice:${event.choice}
+result:${event.result}
+odds: [${event.odds.join(':')}]
+$$$: ${!event.BetTransaction ? 0 : -event.BetTransaction.amount}
+win: ${!event.WinTransaction ? 0 : +event.WinTransaction.amount}`
       shape = 'note'
       color = event.won === null
         ? 'white'
@@ -70,7 +72,7 @@ module.exports.register = (server, options, next) => {
         .findAll()
         .then((bets) =>
           bets.map((b) =>
-        b.getOdds().then((odds) => { b.odds = odds }).then(() => b)))
+            b.getOdds().then((odds) => { b.odds = odds }).then(() => b)))
         .then((bets) => Promise.all(bets))
         .then(graph)
         .then(reply)
