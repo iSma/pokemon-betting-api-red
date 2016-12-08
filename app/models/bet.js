@@ -48,6 +48,19 @@ module.exports = (db, DataTypes) => db.define('Bet', {
 
       this.belongsTo(models.Transaction, { as: 'BetTransaction', foreignKey: { allowNull: false } })
       this.belongsTo(models.Transaction, { as: 'WinTransaction' })
+    },
+
+    joi: function (mode) {
+      const Joi = db.Joi
+
+      return Joi.object({
+        id: Joi.id(),
+        choice: Joi.choice(),
+        result: Joi.choice(),
+        user: Joi.id(),
+        battle: Joi.id(),
+        parent: Joi.id()
+      })
     }
   },
 
@@ -91,7 +104,7 @@ module.exports = (db, DataTypes) => db.define('Bet', {
     },
 
     toJSON: function () {
-      const json = _.pick(this, ['id', 'startTime', 'endTime', 'choice', 'result'])
+      const json = _.pick(this, ['id', 'choice', 'result'])
       return _.merge(json, {
         user: this.UserId,
         battle: this.BattleId,

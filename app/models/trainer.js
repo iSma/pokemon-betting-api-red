@@ -45,6 +45,26 @@ module.exports = (db, DataTypes) => db.define('Trainer', {
           }
         })
         .then(([trainer, created]) => trainer)
+    },
+
+    joi: function (mode) {
+      const Joi = db.Joi
+
+      if (mode === 'stats') {
+        return Joi.object({
+          id: Joi.id(),
+          battles: Joi.bStats(),
+          trainers: Joi.stats(),
+          pokemons: Joi.stats()
+        })
+      } else {
+        return Joi.object({
+          id: Joi.id(),
+          name: Joi.string(),
+          gender: Joi.string().valid('male', 'female'),
+          country: Joi.string().length(2)
+        })
+      }
     }
   },
 

@@ -2,7 +2,7 @@
 const Boom = require('boom')
 
 module.exports.register = (server, options, next) => {
-  const { User } = server.app.db.models
+  const { User, Transaction } = server.app.db.models
   const Joi = server.app.Joi
 
   // Routes covered in this module:
@@ -34,7 +34,7 @@ module.exports.register = (server, options, next) => {
     path: '/users',
     handler: (req, reply) => {
       User
-        .findAll({ attributes: ['name'] })
+        .findAll({ attributes: ['id', 'name'] })
         .then(reply)
     },
 
@@ -47,7 +47,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: Joi.array().items(J.User.joi()) // TODO: verify
+              schema: Joi.array().items(User.joi('min'))
             }
           }
         }
@@ -61,7 +61,7 @@ module.exports.register = (server, options, next) => {
     path: '/users/{id}',
     handler: (req, reply) => {
       User
-        .findById(req.params.id, { attributes: ['name'] })
+        .findById(req.params.id, { attributes: ['id', 'name', 'mail'] })
         .then((user) => User.check404(user))
         .then(reply)
         .catch(reply)
@@ -82,7 +82,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: J.User.joi()
+              schema: User.joi()
             },
             404: {
               description: 'User not found',
@@ -122,7 +122,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: J.User.joi()
+              schema: User.joi('stats')
             },
             404: {
               description: 'User not found',
@@ -300,7 +300,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: Joi.array().items(J.Transaction.joi())
+              schema: Joi.array().items(Transaction.joi())
             },
             404: {
               description: 'User not found'

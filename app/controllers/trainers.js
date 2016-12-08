@@ -37,7 +37,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: Joi.array().items(J.Trainer.joi())
+              schema: Joi.array().items(Trainer.joi())
             }
           }
         }
@@ -71,7 +71,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: J.Trainer.joi()
+              schema: Trainer.joi()
             },
             404: {
               description: 'Trainer not found',
@@ -110,7 +110,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: Joi.object() // TODO
+              schema: Trainer.joi('stats')
             },
             404: {
               description: 'Trainer not found',

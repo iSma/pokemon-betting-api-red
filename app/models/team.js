@@ -24,6 +24,15 @@ module.exports = (db, DataTypes) => db.define('Team', {
         .createFromApi(api.trainer)
         .then((trainer) => battle.createTeam({ index: i + 1, TrainerId: trainer.id }))
         .then((team) => team.setPokemons(api.pokemons.map((p) => p.id)))
+    },
+
+    joi: function (mode) {
+      const Joi = db.Joi
+
+      return Joi.object({
+        trainer: Joi.id(),
+        pokemons: Joi.array().items(Joi.id())
+      })
     }
   },
 

@@ -25,6 +25,18 @@ module.exports = (db, DataTypes) => db.define('Transaction', {
       this.hasOne(models.Bet, { as: 'Win', foreignKey: 'WinTransactionId' })
 
       this.belongsTo(models.User, { foreignKey: { allowNull: false } })
+    },
+
+    joi: function (mode) {
+      const Joi = db.Joi
+
+      return Joi.object({
+        id: Joi.id(),
+        amount: Joi.number(),
+        createdAt: Joi.date(),
+        type: Joi.string().valid('deposit', 'withdrawal', 'bet', 'win'),
+        bet: Joi.id()
+      })
     }
   },
 
