@@ -1,4 +1,5 @@
 'use strict'
+const _ = require('lodash')
 
 module.exports = (db, DataTypes) => db.define('Trainer', {
   id: {
@@ -44,6 +45,72 @@ module.exports = (db, DataTypes) => db.define('Trainer', {
           }
         })
         .then(([trainer, created]) => trainer)
+    }
+  },
+
+  instanceMethods: {
+    getStats: function () {
+      return this
+        .getTeams({ include: [db.models.Battle.scope('teams')] })
+        .then((teams) => teams.filter((t) => t.Battle.result))
+        .then((teams) => teams.map((team) => [
+          team.index === team.Battle.result,
+          _.find(team.Battle.Teams, (t) => t.TrainerId === this.id),
+          _.find(team.Battle.Teams, (t) => t.TrainerId !== this.id),
+        ]))
+        .then((teams) => teams.map(([won, team, opp]) => ({
+          won,
+          team: {
+            trainer: team.TrainerId,
+            pokemons: team.Pokemons.map((p) => p.id)
+          },
+          opp: {
+            trainer: opp.TrainerId,
+            pokemons: opp.Pokemons.map((p) => p.id)
+          }
+        })))
+        .then((teams) => {
+          const stats = (type, group, id) => (id) => _(teams)
+            .filter((t) =>
+              type === 'trainer'
+                ? t[group].trainer === id
+                : t[group].pokemons.includes(id))
+            .countBy((t) => t.won)
+            .defaults({ true: 0, false: 0 })
+            .at(['true', 'false'])
+            .thru(([won, lost]) => ({ id, won, lost }))
+            .value()
+
+          const score = ({ won, lost }) => (won + 1) / (lost + 1)
+
+          const trainers = _(teams)
+            .map((t) => t.opp.trainer)
+            .uniq()
+            .map(stats('trainer', 'opp'))
+            .value()
+
+          const pkmn = _(teams)
+            .flatMap((t) => t.team.pokemons)
+            .uniq()
+            .map(stats('pokemons', 'team'))
+            .value()
+
+          return {
+            battles: {
+              total: teams.length,
+              won: teams.filter((t) => t.won).length,
+              lost: teams.filter((t) => !t.won).length
+            },
+            trainers: {
+              best: _.minBy(trainers, score),
+              worst: _.maxBy(trainers, score)
+            },
+            pokemons: {
+              best: _.maxBy(pkmn, score),
+              worst: _.minBy(pkmn, score)
+            }
+          }
+        })
     }
   }
 })
