@@ -41,18 +41,17 @@ module.exports = (db, DataTypes) => db.define('Battle', {
       this.hasMany(models.Team, { foreignKey: { allowNull: false } })
     },
 
-    resultFromApi: (api) => !api.winner ? null
-      : api.winner.trainer_id === api.team1.trainer.id ? 1 : 2,
+    fromApi: (api) => ({
+      startTime: new Date(api.start_time),
+      endTime: !api.end_time ? null : new Date(api.end_time),
+      result: !api.winner ? null : api.winner.trainer_id === api.team1.trainer.id ? 1 : 2
+    }),
 
     createFromApi: function (api) {
       return this
         .findOrCreate({
           where: { id: api.id },
-          defaults: {
-            startTime: new Date(api.start_time),
-            endTime: !api.end_time ? null : new Date(api.end_time),
-            result: this.resultFromApi(api)
-          }
+          defaults: this.fromApi(api)
         })
         .then(([battle, created]) =>
           !created ? battle
@@ -123,11 +122,12 @@ module.exports = (db, DataTypes) => db.define('Battle', {
       return request
         .get(`${config.api.battle}/battles/${this.id}`)
         .then((res) => JSON.parse(res))
-        .then(this.Model.resultFromApi)
-        .then((result) =>
-          !result ? []
-            : db.transaction((t) => this
-              .update({ result: result }, { transaction: t })
+        .then(this.Model.fromApi)
+        .then((api) =>
+          !api.result
+            ? this.update(api)
+            : db.transaction((t) =>
+              this.update(api, { transaction: t })
                 .then(() => [
                   this.getBets({ where: {ParentId: null}, transaction: t }),
                   this.getOdds({ transaction: t })

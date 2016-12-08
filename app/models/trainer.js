@@ -56,7 +56,7 @@ module.exports = (db, DataTypes) => db.define('Trainer', {
         .then((teams) => teams.map((team) => [
           team.index === team.Battle.result,
           _.find(team.Battle.Teams, (t) => t.TrainerId === this.id),
-          _.find(team.Battle.Teams, (t) => t.TrainerId !== this.id),
+          _.find(team.Battle.Teams, (t) => t.TrainerId !== this.id)
         ]))
         .then((teams) => teams.map(([won, team, opp]) => ({
           won,

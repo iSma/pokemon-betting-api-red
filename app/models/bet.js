@@ -60,31 +60,15 @@ module.exports = (db, DataTypes) => db.define('Bet', {
     }),
 
     active: () => ({
-      include: [{
-        model: db.models.Battle,
-        where: {
-          startTime: { $gt: new Date() }
-        }
-      }]
+      include: [db.models.Battle.scope('active')]
     }),
 
     started: () => ({
-      include: [{
-        model: db.models.Battle,
-        where: {
-          startTime: { $lte: new Date() },
-          endTime: { $gt: new Date() }
-        }
-      }]
+      include: [db.models.Battle.scope('started')]
     }),
 
     ended: () => ({
-      include: [{
-        model: db.models.Battle,
-        where: {
-          endTime: { $lte: new Date() }
-        }
-      }]
+      include: [db.models.Battle.scope('ended')]
     })
   },
 
