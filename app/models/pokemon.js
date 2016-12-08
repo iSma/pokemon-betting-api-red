@@ -77,6 +77,76 @@ module.exports = (db, DataTypes) => db.define('Pokemon', {
         })
         .then(([pkmn, created]) => pkmn)
     }
+  },
+
+  instanceMethods: {
+    getStats: function () {
+      return this
+        .getTeams({ scope: ['battle', 'pokemons'] })
+        .then((teams) => teams.filter((t) => t.Battle.result))
+        .then((teams) => teams.map((team) => team.getOpponent().then((opp) => [team, opp])))
+        .then((teams) => Promise.all(teams))
+        .then((teams) => teams.map(([team, opp]) => ({
+          won: team.index === team.Battle.result,
+          team: {
+            trainer: team.TrainerId,
+            pokemons: team.Pokemons.map((p) => p.id)
+          },
+          opp: {
+            trainer: opp.TrainerId,
+            pokemons: opp.Pokemons.map((p) => p.id)
+          }
+        })))
+        .then((teams) => {
+          const stats = (type, group, id) => (id) => _(teams)
+            .filter((t) =>
+              type === 'trainer'
+                ? t[group].trainer === id
+                : t[group].pokemons.includes(id))
+            .countBy((t) => t.won)
+            .defaults({ true: 0, false: 0 })
+            .at(['true', 'false'])
+            .thru(([won, lost]) => ({ id, won, lost }))
+            .value()
+
+          const score = ({ won, lost }) => (won + 1) / (lost + 1)
+
+          const trainers = _(teams)
+            .map((t) => t.team.trainer)
+            .uniq()
+            .map(stats('trainer', 'team'))
+            .value()
+
+          const pkmn = _.zipObject(['team', 'opp'],
+            ['team', 'opp'].map((group) =>
+              _(teams)
+                .flatMap((t) => t[group].pokemons)
+                .uniq()
+                .filter((p) => p !== this.id)
+                .map(stats('pokemons', group))
+                .value()))
+
+          return {
+            battles: {
+              total: teams.length,
+              won: teams.filter((t) => t.won).length,
+              lost: teams.filter((t) => !t.won).length
+            },
+            trainers: {
+              best: _.maxBy(trainers, score),
+              worst: _.minBy(trainers, score)
+            },
+            teams: {
+              best: _.maxBy(pkmn.team, score),
+              worst: _.minBy(pkmn.team, score)
+            },
+            opponents: {
+              best: _.minBy(pkmn.opp, score),
+              worst: _.maxBy(pkmn.opp, score)
+            }
+          }
+        })
+    }
   }
 })
 
