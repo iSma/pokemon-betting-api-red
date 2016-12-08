@@ -27,12 +27,28 @@ module.exports = (db, DataTypes) => db.define('Team', {
     }
   },
 
+  scopes: {
+    pokemons: () => ({
+      include: [db.models.Pokemon]
+    }),
+
+    battle: () => ({
+      include: [db.models.Battle]
+    })
+  },
+
   instanceMethods: {
     toJSON: function () {
-      return {
-        trainer: this.TrainerId,
-        pokemons: this.Pokemons.map((p) => p.id)
-      }
+      const json = { trainer: this.TrainerId }
+      if (this.Pokemons) json.pokemons = this.Pokemons.map((p) => p.id)
+      return json
+    },
+
+    getOpponent: function () {
+      return Promise.resolve(this.Battle || this.getBattle())
+        .then((battle) => battle.getTeams({ scope: 'pokemons' }))
+        .then((teams) => teams.filter((t) => t.index !== this.index))
+        .then((teams) => teams[0])
     }
   }
 })

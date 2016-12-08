@@ -84,17 +84,14 @@ module.exports = (db, DataTypes) => db.define('Battle', {
     }),
 
     teams: () => ({
-      include: [{
-        model: db.models.Team,
-        include: [db.models.Pokemon]
-      }]
+      include: [db.models.Team.scope('pokemons')]
     })
   },
 
   instanceMethods: {
     getOdds: function ({ transaction: t } = {}) {
       return this
-        .getBets({ include: db.models.Bet.associations.BetTransaction, transaction: t })
+        .getBets({ scope: 'transactions', transaction: t })
         .then((bets) => bets.filter((b) => b.ParentId === null))
         .then((bets) =>
           bets.reduce(([w, l], bet) =>
@@ -137,7 +134,7 @@ module.exports = (db, DataTypes) => db.define('Battle', {
                 ])
                 .then((x) => Promise.all(x))
                 .then(([bets, odds]) =>
-                  bets.map((b) => b.syncResult(this.result, odds, { transaction: t})))
+                  bets.map((b) => b.syncResult(this.result, odds, { transaction: t })))
                 .then((updates) => Promise.all(updates))
                 .then(_.flatMap)
             ))

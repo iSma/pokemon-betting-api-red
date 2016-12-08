@@ -91,7 +91,7 @@ module.exports = (db, DataTypes) => db.define('Bet', {
   instanceMethods: {
     getOdds: function ({ transaction: t } = {}) {
       return this
-        .getBets({ include: this.Model.associations.BetTransaction, transaction: t })
+        .getBets({ scope: 'transactions', transaction: t })
         .then((bets) =>
           bets.reduce(([w, l], bet) =>
             (bet.choice === 1)
@@ -135,7 +135,7 @@ module.exports = (db, DataTypes) => db.define('Bet', {
         ])
         .then((x) => Promise.all(x))
         .then(([bets, odds]) =>
-          bets.map((b) => b.syncResult(r, odds, { transaction: t})))
+          bets.map((b) => b.syncResult(r, odds, { transaction: t })))
         .then((updates) => Promise.all(updates))
         .then(_.flatMap)
     }

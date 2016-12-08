@@ -22,25 +22,23 @@ module.exports.register = (server, options, next) => {
     let node, label, shape, color
     if (event.Model === Battle) {
       node = `battles/${event.id}`
-      label =
-        `${event.id}\n` +
-        `result:${event.result}\n` +
-        `odds: [${event.odds.join(':')}]`
-        shape = 'invhouse'
+      label = `${event.id}
+        result:${event.result}
+        odds: [${event.odds.join(':')}]`
+      shape = 'invhouse'
       color = event.result === null
         ? 'white'
         : event.result === 1 ? 'cyan' : 'yellow'
     } else {
       node = `bets/${event.id}`
-      label =
-        `${event.id}\n` +
-        `users/${event.UserId}\n` +
-        `choice:${event.choice}\n` +
-        `result:${event.result}\n` +
-        `odds: [${event.odds.join(':')}]\n` +
-        `$$$: ${!event.BetTransaction ? 0 : -event.BetTransaction.amount}\n` +
-        `win: ${!event.WinTransaction ? 0 : +event.WinTransaction.amount}`
-        shape = 'note'
+      label = `${event.id}
+        users/${event.UserId}
+        choice:${event.choice}
+        result:${event.result}
+        odds: [${event.odds.join(':')}]
+        $$$: ${!event.BetTransaction ? 0 : -event.BetTransaction.amount}
+        win: ${!event.WinTransaction ? 0 : +event.WinTransaction.amount}`
+      shape = 'note'
       color = event.won === null
         ? 'white'
         : event.won ? 'green' : 'red'
@@ -72,7 +70,7 @@ module.exports.register = (server, options, next) => {
         .findAll()
         .then((bets) =>
           bets.map((b) =>
-            b.getOdds().then((odds) => { b.odds = odds }).then(() => b)))
+        b.getOdds().then((odds) => { b.odds = odds }).then(() => b)))
         .then((bets) => Promise.all(bets))
         .then(graph)
         .then(reply)
