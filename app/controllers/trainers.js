@@ -53,7 +53,7 @@ module.exports.register = (server, options, next) => {
     handler: (req, reply) => {
       Trainer
         .findById(req.params.id)
-        .then((pkmn) => Trainer.check404(pkmn))
+        .then((trainer) => Trainer.check404(trainer))
         .then(reply)
         .catch(reply)
     },
@@ -73,6 +73,45 @@ module.exports.register = (server, options, next) => {
             200: {
               description: 'Success',
               schema: J.Trainer.joi()
+            },
+            404: {
+              description: 'Trainer not found',
+              schema: Joi.object()
+            }
+          }
+        }
+      }
+    }
+  })
+
+  // GET /trainers/{id}/stats
+  server.route({
+    method: 'GET',
+    path: '/trainers/{id}/stats',
+    handler: (req, reply) => {
+      Trainer
+        .findById(req.params.id)
+        .then((trainer) => Trainer.check404(trainer))
+        .then((trainer) => trainer.getStats())
+        .then(reply)
+        .catch(reply)
+    },
+
+    config: {
+      tags: ['api'],
+      description: 'Get statistics on a trainer',
+      validate: {
+        params: {
+          id: J.ID.required()
+        }
+      },
+
+      plugins: {
+        'hapi-swagger': {
+          'responses': {
+            200: {
+              description: 'Success',
+              schema: Joi.object() // TODO
             },
             404: {
               description: 'Trainer not found',

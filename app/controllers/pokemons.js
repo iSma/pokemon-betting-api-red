@@ -138,6 +138,45 @@ module.exports.register = (server, options, next) => {
     }
   })
 
+  // GET /pokemons/{id}/stats
+  server.route({
+    method: 'GET',
+    path: '/pokemons/{id}/stats',
+    handler: (req, reply) => {
+      Pokemon
+        .findById(req.params.id)
+        .then((pkmn) => Pokemon.check404(pkmn))
+        .then((pkmn) => pkmn.getStats())
+        .then(reply)
+        .catch(reply)
+    },
+
+    config: {
+      tags: ['api'],
+      description: 'Get statistics on a pokemon',
+      validate: {
+        params: {
+          id: J.ID.required()
+        }
+      },
+
+      plugins: {
+        'hapi-swagger': {
+          'responses': {
+            200: {
+              description: 'Success',
+              schema: Joi.object() // TODO
+            },
+            404: {
+              description: 'Pokemon not found',
+              schema: Joi.object()
+            }
+          }
+        }
+      }
+    }
+  })
+
   return next()
 }
 
