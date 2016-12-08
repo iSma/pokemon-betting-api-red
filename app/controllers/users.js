@@ -1,10 +1,9 @@
 'use strict'
 const Boom = require('boom')
-const Joi = require('joi')
 
 module.exports.register = (server, options, next) => {
-  const { User } = server.app.db.models
-  const J = server.app.joi
+  const { User, Transaction } = server.app.db.models
+  const Joi = server.app.Joi
 
   // Routes covered in this module:
   // - /users
@@ -35,7 +34,7 @@ module.exports.register = (server, options, next) => {
     path: '/users',
     handler: (req, reply) => {
       User
-        .findAll({ attributes: ['name'] })
+        .findAll({ attributes: ['id', 'name'] })
         .then(reply)
     },
 
@@ -48,7 +47,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: Joi.array().items(J.User.joi()) // TODO: verify
+              schema: Joi.array().items(User.joi('min'))
             }
           }
         }
@@ -62,7 +61,7 @@ module.exports.register = (server, options, next) => {
     path: '/users/{id}',
     handler: (req, reply) => {
       User
-        .findById(req.params.id, { attributes: ['name'] })
+        .findById(req.params.id, { attributes: ['id', 'name', 'mail'] })
         .then((user) => User.check404(user))
         .then(reply)
         .catch(reply)
@@ -74,7 +73,7 @@ module.exports.register = (server, options, next) => {
 
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         }
       },
 
@@ -83,7 +82,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: J.User.joi()
+              schema: User.joi()
             },
             404: {
               description: 'User not found',
@@ -114,7 +113,7 @@ module.exports.register = (server, options, next) => {
 
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         }
       },
 
@@ -123,7 +122,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: J.User.joi()
+              schema: User.joi('stats')
             },
             404: {
               description: 'User not found',
@@ -155,7 +154,7 @@ module.exports.register = (server, options, next) => {
 
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         },
         query: {
           token: Joi.string()
@@ -215,7 +214,7 @@ module.exports.register = (server, options, next) => {
           responses: {
             201: {
               description: 'User created',
-              schema: Joi.object({ id: J.ID })
+              schema: Joi.object({ id: Joi.id() })
             },
             422: {
               description: 'User name or mail already exists',
@@ -247,7 +246,7 @@ module.exports.register = (server, options, next) => {
 
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         },
         query: {
           token: Joi.string()
@@ -277,7 +276,7 @@ module.exports.register = (server, options, next) => {
     handler: (req, reply) => {
       checkPermissions(req)
         .then((user) => User.check404(user))
-        .then((user) => user.getTransactions())
+        .then((user) => user.getTransactions({ scope: 'bets', order: 'time' }))
         .then(reply) // TODO: send new token
         .catch(reply)
     },
@@ -289,7 +288,7 @@ module.exports.register = (server, options, next) => {
 
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         },
         query: {
           token: Joi.string()
@@ -301,7 +300,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: Joi.array().items(J.Transaction.joi())
+              schema: Joi.array().items(Transaction.joi())
             },
             404: {
               description: 'User not found'
@@ -340,7 +339,7 @@ module.exports.register = (server, options, next) => {
           amount: Joi.number().required()
         },
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         },
         query: {
           token: Joi.string()
@@ -353,7 +352,7 @@ module.exports.register = (server, options, next) => {
             201: {
               description: 'Success',
               schema: Joi.object({
-                transaction: J.ID,
+                transaction: Joi.id(),
                 balance: Joi.number()
               })
             },

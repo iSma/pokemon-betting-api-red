@@ -76,6 +76,31 @@ module.exports = (db, DataTypes) => db.define('Pokemon', {
           defaults: pkmn
         })
         .then(([pkmn, created]) => pkmn)
+    },
+
+    joi: function (mode) {
+      const Joi = db.Joi
+
+      if (mode === 'stats') {
+        return Joi.object({
+          id: Joi.id(),
+          battles: Joi.bStats(),
+          trainers: Joi.stats(),
+          teams: Joi.stats(),
+          opponents: Joi.stats()
+        })
+      } else {
+        return Joi.object({
+          id: Joi.id(),
+          name: Joi.string(),
+          total: Joi.number().integer().min(0),
+          hp: Joi.number().integer().min(0),
+          atk: Joi.number().integer().min(0),
+          def: Joi.number().integer().min(0),
+          spatk: Joi.number().integer().min(0),
+          spdef: Joi.number().integer().min(0)
+        })
+      }
     }
   },
 

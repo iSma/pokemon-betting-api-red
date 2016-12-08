@@ -1,15 +1,13 @@
 'use strict'
-const Joi = require('joi')
-const fs = require('fs')
 
 const exists = (path) => new Promise((resolve, reject) => {
-  fs.stat(path, (err, stat) => !err ? resolve(true)
+  require('fs').stat(path, (err, stat) => !err ? resolve(true)
       : err.code === 'ENOENT' ? resolve(false) : reject(err))
 })
 
 module.exports.register = (server, options, next) => {
   const { Pokemon } = server.app.db.models
-  const J = server.app.joi
+  const Joi = server.app.Joi
 
   // Routes covered in this module:
   // - /pokemons
@@ -44,7 +42,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: Joi.array().items(J.Pokemon.joi())
+              schema: Joi.array().items(Pokemon.joi())
             }
           }
         }
@@ -69,7 +67,7 @@ module.exports.register = (server, options, next) => {
       description: 'Get a pokemon',
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         }
       },
 
@@ -78,7 +76,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: J.Pokemon.joi()
+              schema: Pokemon.joi()
             },
             404: {
               description: 'Pokemon not found',
@@ -112,7 +110,7 @@ module.exports.register = (server, options, next) => {
       description: 'Get a pokemon image',
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         },
         query: {
           size: Joi.string()
@@ -126,7 +124,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: J.Pokemon.joi()
+              schema: Pokemon.joi()
             },
             404: {
               description: 'Pokemon not found',
@@ -156,7 +154,7 @@ module.exports.register = (server, options, next) => {
       description: 'Get statistics on a pokemon',
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         }
       },
 
@@ -165,7 +163,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: Joi.object() // TODO
+              schema: Pokemon.joi('stats')
             },
             404: {
               description: 'Pokemon not found',

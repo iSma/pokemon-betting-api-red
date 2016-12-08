@@ -1,9 +1,8 @@
 'use strict'
-const Joi = require('joi')
 
 module.exports.register = (server, options, next) => {
   const { Trainer } = server.app.db.models
-  const J = server.app.joi
+  const Joi = server.app.Joi
 
   // Routes covered in this module:
   // - /trainers
@@ -38,7 +37,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: Joi.array().items(J.Trainer.joi())
+              schema: Joi.array().items(Trainer.joi())
             }
           }
         }
@@ -63,7 +62,7 @@ module.exports.register = (server, options, next) => {
       description: 'Get a trainer',
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         }
       },
 
@@ -72,7 +71,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: J.Trainer.joi()
+              schema: Trainer.joi()
             },
             404: {
               description: 'Trainer not found',
@@ -102,7 +101,7 @@ module.exports.register = (server, options, next) => {
       description: 'Get statistics on a trainer',
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         }
       },
 
@@ -111,7 +110,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: Joi.object() // TODO
+              schema: Trainer.joi('stats')
             },
             404: {
               description: 'Trainer not found',

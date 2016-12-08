@@ -59,6 +59,21 @@ module.exports = (db, DataTypes) => db.define('Battle', {
             .then((teams) => teams.map((t, i) => db.models.Team.createFromApi(t, battle, i)))
             .then((teams) => Promise.all(teams))
             .then((teams) => battle))
+    },
+
+    joi: function (mode) {
+      const Joi = db.Joi
+
+      return Joi.object({
+        id: Joi.id(),
+        startTime: Joi.date(),
+        endTime: Joi.date(),
+        result: Joi.choice(),
+        teams: {
+          1: db.models.Team.joi(),
+          2: db.models.Team.joi()
+        }
+      })
     }
   },
 

@@ -2,7 +2,6 @@
 
 const Sequelize = require('sequelize')
 const Joi = require('joi')
-const JoiSequelize = require('joi-sequelize')
 const Boom = require('boom')
 
 module.exports.register = (server, options, next) => {
@@ -29,20 +28,34 @@ module.exports.register = (server, options, next) => {
       }
     })
 
+  Joi.id = () => Joi.number().integer().positive()
+  Joi.choice = () => Joi.number().integer().min(1).max(2).required()
+
+  Joi.stat = () => Joi.object({
+    id: Joi.id(),
+    won: Joi.number().integer().min(0),
+    lost: Joi.number().integer().min(0)
+  })
+
+  Joi.stats = () => Joi.object({
+    best: Joi.stat(),
+    worst: Joi.stat()
+  })
+
+  Joi.bStats = () => Joi.object({
+    total: Joi.number().integer().min(0),
+    won: Joi.number().integer().min(0),
+    lost: Joi.number().integer().min(0)
+  })
+
   server.app.db = db
   server.app.db.app = server.app
-  server.app.joi = {
-    ID: Joi.number().integer().positive()
-  }
+  server.app.Joi = db.Joi = Joi
 
   require('fs')
     .readdirSync('./models')
     .filter((file) => file !== 'index.js')
-    .forEach((file) => {
-      const model = db.import(file)
-      const joi = new JoiSequelize(require(`./${file}`))
-      server.app.joi[model.name] = joi // TODO: move Joi schema to class method
-    })
+    .forEach((file) => db.import(file))
 
   for (const model in db.models) {
     db.models[model].associate(db.models)

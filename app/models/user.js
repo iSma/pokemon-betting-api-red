@@ -39,6 +39,30 @@ module.exports = (db, DataTypes) => db.define('User', {
       return new Promise((resolve, reject) => {
         bcrypt.hash(pass, 10, (err, hash) => (err) ? reject(err) : resolve(hash))
       })
+    },
+
+    joi: function (mode) {
+      const Joi = db.Joi
+
+      if (mode === 'stats') {
+        return Joi.object({
+          id: Joi.id(),
+          all: Joi.bStats(),
+          onBattle: Joi.bStats(),
+          onBet: Joi.bStats()
+        })
+      } else if (mode === 'min') {
+        return Joi.object({
+          id: Joi.id(),
+          name: Joi.string()
+        })
+      } else {
+        return Joi.object({
+          id: Joi.id(),
+          name: Joi.string(),
+          mail: Joi.string().email()
+        })
+      }
     }
   },
 
@@ -58,7 +82,7 @@ module.exports = (db, DataTypes) => db.define('User', {
 
     getStats: function () {
       return this
-        .getBets()
+        .getBets({ scope: 'ended' })
         .then((bets) => {
           const onBattle = bets.filter((b) => !b.ParentId)
           const onBet = bets.filter((b) => b.ParentId)
@@ -66,20 +90,22 @@ module.exports = (db, DataTypes) => db.define('User', {
           return {
             id: this.id,
 
-            total: bets.length,
-            won: bets.filter((b) => b.won).length,
-            lost: bets.filter((b) => !b.won).length,
+            all: {
+              total: bets.length,
+              won: bets.filter((b) => b.won).length,
+              lost: bets.filter((b) => !b.won).length
+            },
 
             onBattle: {
               total: onBattle.length,
               won: onBattle.filter((b) => b.won).length,
-              lost: onBattle.filter((b) => !b.won).length,
+              lost: onBattle.filter((b) => !b.won).length
             },
 
             onBet: {
               total: onBet.length,
               won: onBet.filter((b) => b.won).length,
-              lost: onBet.filter((b) => !b.won).length,
+              lost: onBet.filter((b) => !b.won).length
             }
           }
         })
