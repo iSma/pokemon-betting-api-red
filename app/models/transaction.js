@@ -19,6 +19,9 @@ module.exports = (db, DataTypes) => db.define('Transaction', {
   }
 
 }, {
+  timestamps: true,
+  createdAt: 'time',
+  updatedAt: false,
   classMethods: {
     associate: function (models) {
       this.hasOne(models.Bet, { as: 'Bet', foreignKey: 'BetTransactionId' })
@@ -33,7 +36,7 @@ module.exports = (db, DataTypes) => db.define('Transaction', {
       return Joi.object({
         id: Joi.id(),
         amount: Joi.number(),
-        createdAt: Joi.date(),
+        time: Joi.date(),
         type: Joi.string().valid('deposit', 'withdrawal', 'bet', 'win'),
         bet: Joi.id()
       })
@@ -51,7 +54,7 @@ module.exports = (db, DataTypes) => db.define('Transaction', {
 
   instanceMethods: {
     toJSON: function () {
-      const json = _.pick(this, ['id', 'amount', 'createdAt'])
+      const json = _.pick(this, ['id', 'amount', 'time'])
       const type = this.type
       if (type) {
         json.type = type

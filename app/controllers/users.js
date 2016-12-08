@@ -276,7 +276,7 @@ module.exports.register = (server, options, next) => {
     handler: (req, reply) => {
       checkPermissions(req)
         .then((user) => User.check404(user))
-        .then((user) => user.getTransactions())
+        .then((user) => user.getTransactions({ scope: 'bets', order: 'time' }))
         .then(reply) // TODO: send new token
         .catch(reply)
     },
