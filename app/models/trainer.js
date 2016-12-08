@@ -96,6 +96,7 @@ module.exports = (db, DataTypes) => db.define('Trainer', {
             .value()
 
           return {
+            id: this.id,
             battles: {
               total: teams.length,
               won: teams.filter((t) => t.won).length,

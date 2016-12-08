@@ -130,6 +130,7 @@ module.exports = (db, DataTypes) => db.define('Pokemon', {
                 .value()))
 
           return {
+            id: this.id,
             battles: {
               total: teams.length,
               won: teams.filter((t) => t.won).length,
