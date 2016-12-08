@@ -101,7 +101,7 @@ module.exports.register = (server, options, next) => {
       Battle
         .findById(req.params.id)
         .then((battle) => Battle.check404(battle))
-        .then((battle) => battle.getBets())
+        .then((battle) => battle.getBets({ where: { ParentId: null} }))
         .then(reply)
         .catch(reply)
     },
