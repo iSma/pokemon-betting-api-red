@@ -2,7 +2,7 @@
 const Boom = require('boom')
 
 module.exports.register = (server, options, next) => {
-  const { User, Transaction } = server.app.db.models
+  const { User, Transaction, Bet } = server.app.db.models
   const Joi = server.app.Joi
 
   // Routes covered in this module:
@@ -14,9 +14,9 @@ module.exports.register = (server, options, next) => {
   //  + DELETE
   //  + PATCH: Update profile
   // - /users/{id}/bets
-  //  TODO+ GET?
+  //  + GET (only visible to user)
   // - /users/{id}/stats
-  //  TODO+ GET
+  //  + GET
   // - /users/{id}/transactions (only visible to user)
   //  + GET
   //  + POST
@@ -226,6 +226,50 @@ module.exports.register = (server, options, next) => {
     }
   })
 
+  // GET /users/{id}/bets
+  server.route({
+    method: 'GET',
+    path: '/users/{id}/bets',
+    handler: (req, reply) => {
+      checkPermissions(req)
+        .then((user) => User.check404(user))
+        .then((user) => user.getBets({ scope: req.query.status }))
+        .then(reply) // TODO: send new token
+        .catch(reply)
+    },
+
+    config: {
+      tags: ['api'],
+      description: 'List bets of user',
+      auth: 'jwt',
+      validate: {
+        params: {
+          id: Joi.id().required()
+        },
+        query: {
+          token: Joi.string(),
+          status: Joi.string()
+            .valid(['active', 'started', 'ended'])
+            .default('active')
+        }
+      },
+
+      plugins: {
+        'hapi-swagger': {
+          'responses': {
+            200: {
+              description: 'Success',
+              schema: Joi.array().items(Bet.joi())
+            },
+            404: {
+              description: 'User not found'
+            }
+          }
+        }
+      }
+    }
+  })
+
   // GET /users/{id}/balance
   server.route({
     method: 'GET',
@@ -258,7 +302,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: Joi.number()
+              schema: Joi.object({ balance: Joi.number() })
             },
             404: {
               description: 'User not found'
