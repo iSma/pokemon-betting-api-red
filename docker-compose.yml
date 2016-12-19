@@ -4,9 +4,6 @@ db:
     - "./db/data:/var/lib/postgresql/data"
     - "./db/init:/docker-entrypoint-initdb.d"
 
-  ports:
-    - "5000:5432"
-
   env_file:
     - db.env
 
@@ -15,9 +12,6 @@ app:
   build: .
   links:
     - db
-
-  volumes:
-    - "./app:/app"
 
   ports:
     - "3000:3000"
