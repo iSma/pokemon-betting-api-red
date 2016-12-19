@@ -1,6 +1,6 @@
 {
   "name": "pokemon-betting-api-red",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -31,7 +31,8 @@
     "joi-sequelize": "^0.2.7",
     "lodash": "^4.16.6",
     "pg": "^6.1.0",
-    "request-json": "^0.6.1",
+    "pokemon-sprites": "github:pokeapi/sprites",
+    "request-promise": "^4.1.1",
     "sequelize": "^3.24.4",
     "vision": "^4.1.0"
   },

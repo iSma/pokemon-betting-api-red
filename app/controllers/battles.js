@@ -1,9 +1,8 @@
 'use strict'
-const Joi = require('joi')
 
 module.exports.register = (server, options, next) => {
-  const { Battle, User } = server.app.db.models
-  const J = server.app.joi
+  const { Battle, Bet, User } = server.app.db.models
+  const Joi = server.app.Joi
 
   // Routes covered in this module:
   // - /battles
@@ -26,7 +25,7 @@ module.exports.register = (server, options, next) => {
     handler: (req, reply) => {
       // TODO: get all battles with limit/offset
       Battle
-        .scope(req.query.status)
+        .scope('teams', req.query.status)
         .findAll()
         .then(reply)
     },
@@ -37,7 +36,7 @@ module.exports.register = (server, options, next) => {
       validate: {
         query: {
           status: Joi.string()
-            .valid(['active', 'started', 'finished'])
+            .valid(['active', 'started', 'ended'])
             .default('active')
         }
       },
@@ -47,7 +46,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: Joi.array().items(J.Battle.joi())
+              schema: Joi.array().items(Battle.joi())
             }
           }
         }
@@ -61,6 +60,7 @@ module.exports.register = (server, options, next) => {
     path: '/battles/{id}',
     handler: (req, reply) => {
       Battle
+        .scope('teams')
         .findById(req.params.id)
         .then((battle) => Battle.check404(battle))
         .then(reply)
@@ -72,7 +72,7 @@ module.exports.register = (server, options, next) => {
       description: 'Get a battle',
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         }
       },
 
@@ -81,7 +81,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: J.Battle.joi()
+              schema: Battle.joi()
             },
             404: {
               description: 'Battle not found',
@@ -101,7 +101,7 @@ module.exports.register = (server, options, next) => {
       Battle
         .findById(req.params.id)
         .then((battle) => Battle.check404(battle))
-        .then((battle) => battle.getBets())
+        .then((battle) => battle.getBets({ where: { ParentId: null} }))
         .then(reply)
         .catch(reply)
     },
@@ -111,7 +111,7 @@ module.exports.register = (server, options, next) => {
       description: 'List bets on a battle',
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         }
       },
 
@@ -120,7 +120,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: Joi.array().items(J.Bet.joi()) // TODO: add relations
+              schema: Joi.array().items(Bet.joi())
             },
             404: {
               description: 'Battle not found',
@@ -153,11 +153,11 @@ module.exports.register = (server, options, next) => {
 
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         },
         payload: {
           amount: Joi.number().positive().required(),
-          choice: Joi.number().min(1).max(2).required()
+          choice: Joi.choice().required()
         },
         query: {
           token: Joi.string()
@@ -203,7 +203,7 @@ module.exports.register = (server, options, next) => {
       description: 'Get odds on a battle',
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         }
       },
 

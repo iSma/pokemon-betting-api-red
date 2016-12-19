@@ -40,79 +40,101 @@ module.exports = (db, DataTypes) => db.define('Bet', {
 }, {
   classMethods: {
     associate: function (models) {
-      this.belongsTo(this, { as: 'Parent', foreignKey: 'ParentId' })
-      this.hasMany(this, { as: 'Bet', foreignKey: 'ParentId' })
+      this.belongsTo(this, { as: 'Parent' })
+      this.hasMany(this, { foreignKey: 'ParentId' })
 
       this.belongsTo(models.Battle, { foreignKey: { allowNull: false } })
       this.belongsTo(models.User, { foreignKey: { allowNull: false } })
 
-      this.belongsTo(models.Transaction, { foreignKey: { allowNull: false } })
+      this.belongsTo(models.Transaction, { as: 'BetTransaction', foreignKey: { allowNull: false } })
       this.belongsTo(models.Transaction, { as: 'WinTransaction' })
+    },
 
-      this.addScope('active', function () {
-        return {
-          include: [{
-            model: models.Battle,
-            where: {
-              startTime: { $gt: new Date() }
-            }
-          }]
-        }
-      })
+    joi: function (mode) {
+      const Joi = db.Joi
 
-      this.addScope('started', function () {
-        return {
-          include: [{
-            model: models.Battle,
-            where: {
-              startTime: { $lte: new Date() },
-              endTime: { $gt: new Date() }
-            }
-          }]
-        }
-      })
-
-      this.addScope('finished', function () {
-        return {
-          include: [{
-            model: models.Battle,
-            where: {
-              endTime: { $lte: new Date() }
-            }
-          }]
-        }
+      return Joi.object({
+        id: Joi.id(),
+        choice: Joi.choice(),
+        result: Joi.choice(),
+        user: Joi.id(),
+        battle: Joi.id(),
+        parent: Joi.id()
       })
     }
   },
 
+  scopes: {
+    transactions: () => ({
+      include: [
+        db.models.Bet.associations.BetTransaction,
+        db.models.Bet.associations.WinTransaction
+      ]
+    }),
+
+    active: () => ({
+      include: [db.models.Battle.scope('active')]
+    }),
+
+    started: () => ({
+      include: [db.models.Battle.scope('started')]
+    }),
+
+    ended: () => ({
+      include: [db.models.Battle.scope('ended')]
+    })
+  },
+
   instanceMethods: {
-    getOdds: function () {
+    getOdds: function ({ transaction: t } = {}) {
       return this
-        .getBet({ include: this.Model.associations.Transaction })
+        .getBets({ scope: 'transactions', transaction: t })
         .then((bets) =>
-          bets.reduce(([win, lose], bet) =>
+          bets.reduce(([w, l], bet) =>
             (bet.choice === 1)
-              ? [win - bet.Transaction.amount, lose]
-              : [win, lose - bet.Transaction.amount],
+              ? [w - bet.BetTransaction.amount, l]
+              : [w, l - bet.BetTransaction.amount],
             [0, 0]))
     },
 
-    getAmount: function () {
+    getAmount: function ({ transaction: t } = {}) {
       return this
-        .getTransaction()
+        .getBetTransaction({ transaction: t })
         .then((t) => -t.amount)
     },
 
-    updateResult: function (result, t) {
-      // TODO: Distribute money
+    toJSON: function () {
+      const json = _.pick(this, ['id', 'choice', 'result'])
+      return _.merge(json, {
+        user: this.UserId,
+        battle: this.BattleId,
+        parent: this.ParentId
+      })
+    },
+
+    syncResult: function (result, [w, l], { transaction: t } = {}) {
+      // TODO: Keep percentage of wins + unclaimed money
       const r = 1 + (this.choice !== result)
+      const total = w + l
+      const share = this.choice === 1 ? w : l
+
       return this
-        .update({ result: result }, { transaction: t })
-        .then(() => this.getBet())
-        .then((bets) => bets.map((b) => b.updateResult(r, t)))
-        .then(_.flatMap)
+        .update({ result }, { transaction: t })
+        .then(() => !this.won ? null
+          : this
+            .getAmount({ transaction: t })
+            .then((amount) => amount / share * total)
+            .then((amount) => ({ amount, UserId: this.UserId }))
+            .then((wintr) => this.createWinTransaction(wintr, { transaction: t })))
+        .then(() => [
+          this.getBets({ transaction: t }),
+          this.getOdds({ transaction: t })
+        ])
+        .then((x) => Promise.all(x))
+        .then(([bets, odds]) =>
+          bets.map((b) => b.syncResult(r, odds, { transaction: t })))
         .then((updates) => Promise.all(updates))
-        .then(() => true)
+        .then(_.flatMap)
     }
   }
 })

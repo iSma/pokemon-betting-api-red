@@ -6,6 +6,7 @@ function Provisioner () {
   this.BETS_PER_USER = 4
 
   const server = { app: {} }
+  require('./config').register(server, { }, () => { })
   require('./models').register(server, { }, () => { })
 
   const { Battle, Bet, User } = server.app.db.models
@@ -57,7 +58,7 @@ function Provisioner () {
 
         const n = numUsers - users.length
         let last = users.map((u) => u.mail.split('@')[0].split('-')[1])
-        last = Math.max(...last) + 1
+        last = users.length === 0 ? 0 : Math.max(...last) + 1
 
         users = _.range(last, last + n)
           .map((i) => User.create({

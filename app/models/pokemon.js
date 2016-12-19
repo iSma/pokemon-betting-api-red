@@ -1,7 +1,7 @@
 'use strict'
 const _ = require('lodash')
 
-module.exports = (db, DataTypes) => db.define('Trainer', {
+module.exports = (db, DataTypes) => db.define('Pokemon', {
   id: {
     type: DataTypes.INTEGER,
     allowNull: false,
@@ -13,38 +13,69 @@ module.exports = (db, DataTypes) => db.define('Trainer', {
     allowNull: false
   },
 
-  gender: {
-    type: DataTypes.ENUM,
-    values: ['male', 'female'],
-    allowNull: false
+  hp: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    default: 0
   },
 
-  country: {
-    type: DataTypes.STRING(2),
-    validate: { isLowercase: true },
-    len: 2,
+  atk: {
+    type: DataTypes.INTEGER,
     allowNull: false,
-    set: function (val) {
-      this.setDataValue('country', val.substring(0, 2).toLowerCase())
+    default: 0
+  },
+
+  def: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    default: 0
+  },
+
+  spatk: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    default: 0
+  },
+
+  spdef: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    default: 0
+  },
+
+  speed: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    default: 0
+  },
+
+  total: {
+    type: DataTypes.VIRTUAL(DataTypes.INTEGER, ['hp', 'atk', 'def', 'spatk', 'spdef', 'speed']),
+    get: function () {
+      return ['hp', 'atk', 'def', 'spatk', 'spdef', 'speed']
+        .map((s) => this[s])
+        .reduce((a, b) => a + b)
     }
   }
 }, {
   classMethods: {
     associate: function (models) {
-      this.hasMany(models.Team, { foreignKey: { allowNull: false } })
+      this.belongsToMany(models.Team, { through: 'TeamPokemon' })
     },
 
     createFromApi: function (api) {
+      const pkmn = _(['hp', 'atk', 'def', 'spatk', 'spdef', 'speed'])
+        .zipObject(api.stats)
+        .merge(api)
+        .omit('stats')
+        .value()
+
       return this
         .findOrCreate({
           where: { id: api.id },
-          defaults: {
-            name: api.name,
-            gender: api.gender,
-            country: api.country_code
-          }
+          defaults: pkmn
         })
-        .then(([trainer, created]) => trainer)
+        .then(([pkmn, created]) => pkmn)
     },
 
     joi: function (mode) {
@@ -55,14 +86,19 @@ module.exports = (db, DataTypes) => db.define('Trainer', {
           id: Joi.id(),
           battles: Joi.bStats(),
           trainers: Joi.stats(),
-          pokemons: Joi.stats()
+          teams: Joi.stats(),
+          opponents: Joi.stats()
         })
       } else {
         return Joi.object({
           id: Joi.id(),
           name: Joi.string(),
-          gender: Joi.string().valid('male', 'female'),
-          country: Joi.string().length(2)
+          total: Joi.number().integer().min(0),
+          hp: Joi.number().integer().min(0),
+          atk: Joi.number().integer().min(0),
+          def: Joi.number().integer().min(0),
+          spatk: Joi.number().integer().min(0),
+          spdef: Joi.number().integer().min(0)
         })
       }
     }
@@ -75,8 +111,8 @@ module.exports = (db, DataTypes) => db.define('Trainer', {
         .then((teams) => teams.filter((t) => t.Battle.result))
         .then((teams) => teams.map((team) => [
           team.index === team.Battle.result,
-          _.find(team.Battle.Teams, (t) => t.TrainerId === this.id),
-          _.find(team.Battle.Teams, (t) => t.TrainerId !== this.id)
+          _.find(team.Battle.Teams, (t) => t.index === team.index),
+          _.find(team.Battle.Teams, (t) => t.index !== team.index)
         ]))
         .then((teams) => teams.map(([won, team, opp]) => ({
           won,
@@ -104,16 +140,19 @@ module.exports = (db, DataTypes) => db.define('Trainer', {
           const score = ({ won, lost }) => (won + 1) / (lost + 1)
 
           const trainers = _(teams)
-            .map((t) => t.opp.trainer)
+            .map((t) => t.team.trainer)
             .uniq()
-            .map(stats('trainer', 'opp'))
+            .map(stats('trainer', 'team'))
             .value()
 
-          const pkmn = _(teams)
-            .flatMap((t) => t.team.pokemons)
-            .uniq()
-            .map(stats('pokemons', 'team'))
-            .value()
+          const pkmn = _.zipObject(['team', 'opp'],
+            ['team', 'opp'].map((group) =>
+              _(teams)
+                .flatMap((t) => t[group].pokemons)
+                .uniq()
+                .filter((p) => p !== this.id)
+                .map(stats('pokemons', group))
+                .value()))
 
           return {
             id: this.id,
@@ -123,12 +162,16 @@ module.exports = (db, DataTypes) => db.define('Trainer', {
               lost: teams.filter((t) => !t.won).length
             },
             trainers: {
-              best: _.minBy(trainers, score),
-              worst: _.maxBy(trainers, score)
+              best: _.maxBy(trainers, score),
+              worst: _.minBy(trainers, score)
             },
-            pokemons: {
-              best: _.maxBy(pkmn, score),
-              worst: _.minBy(pkmn, score)
+            teams: {
+              best: _.maxBy(pkmn.team, score),
+              worst: _.minBy(pkmn.team, score)
+            },
+            opponents: {
+              best: _.minBy(pkmn.opp, score),
+              worst: _.maxBy(pkmn.opp, score)
             }
           }
         })

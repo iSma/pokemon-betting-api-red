@@ -1,9 +1,8 @@
 'use strict'
-const Joi = require('joi')
 
 module.exports.register = (server, options, next) => {
   const { Bet, User } = server.app.db.models
-  const J = server.app.joi
+  const Joi = server.app.Joi
 
   // Routes covered in this module:
   // - /bets
@@ -36,7 +35,7 @@ module.exports.register = (server, options, next) => {
       validate: {
         query: {
           status: Joi.string()
-            .valid(['active', 'started', 'finished'])
+            .valid(['active', 'started', 'ended'])
             .default('active')
         }
       },
@@ -46,7 +45,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: Joi.array().items(J.Bet.joi()) // TODO: add relations
+              schema: Joi.array().items(Bet.joi())
             }
           }
         }
@@ -71,7 +70,7 @@ module.exports.register = (server, options, next) => {
       description: 'Get a bet',
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         }
       },
 
@@ -80,7 +79,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: J.Bet.joi() // TODO: add relations
+              schema: Bet.joi()
             },
             404: {
               description: 'Bet not found',
@@ -110,7 +109,7 @@ module.exports.register = (server, options, next) => {
       description: 'List all bets made on this bet',
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         }
       },
 
@@ -119,7 +118,7 @@ module.exports.register = (server, options, next) => {
           'responses': {
             200: {
               description: 'Success',
-              schema: Joi.array().items(J.Bet.joi()) // TODO: add relations
+              schema: Joi.array().items(Bet.joi())
             },
             404: {
               description: 'Bet not found',
@@ -137,7 +136,7 @@ module.exports.register = (server, options, next) => {
     path: '/bets/{id}/bets',
     handler: (req, reply) => {
       Promise.all([
-        User.findById(req.auth.credentials.id).then((user) => User.check404(user)),
+        User.findById(req.auth.credentials.sub).then((user) => User.check404(user)),
         Bet.findById(req.params.id).then((bet) => Bet.check404(bet))
       ])
         .then(([user, bet]) => user.placeBet(bet, req.payload.amount, req.payload.choice))
@@ -148,13 +147,15 @@ module.exports.register = (server, options, next) => {
     config: {
       tags: ['api'],
       description: 'Place a bet on this bet',
+      auth: 'jwt',
+
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         },
         payload: {
           amount: Joi.number().positive().required(),
-          choice: Joi.number().min(1).max(2).required()
+          choice: Joi.choice().required()
         },
         query: {
           token: Joi.string()
@@ -200,7 +201,7 @@ module.exports.register = (server, options, next) => {
       description: 'Get odds on a bet',
       validate: {
         params: {
-          id: J.ID.required()
+          id: Joi.id().required()
         }
       },
 
